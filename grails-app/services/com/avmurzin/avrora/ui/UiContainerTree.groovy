@@ -1,0 +1,194 @@
+package com.avmurzin.avrora.ui
+
+import com.avmurzin.avrora.db.Container
+import java.util.concurrent.ConcurrentHashMap
+import com.avmurzin.avrora.global.*
+import com.avmurzin.avrora.aux.ContainerType
+import com.avmurzin.avrora.sec.User
+
+/**
+ * Генерация JSON-данных для элемента UI - дерево контейнеров на основе ссылки
+ * на репозиторий контейнеров (выборка всех объектов и установка связей между
+ * ними на базе UUID и ParentUUID).
+ * @author Andrei Murzin (http://avmurzin.com)
+ *
+ */
+class UiContainerTree {
+	public static final UiContainerTree INSTANCE = new UiContainerTree();
+
+	private Map<UUID, TreeElement> map = new ConcurrentHashMap<UUID, TreeElement>();
+	private TreeElement tree, root;
+	private UUID key;
+
+	public static UiContainerTree getInstance() {
+		return INSTANCE;
+	}
+
+	/**
+	 * Получить корень дерева, при сериализации в JSON "вытягивает" всё дерево.
+	 * @return
+	 */
+	public TreeElement getTree() {
+		return root;
+	}
+
+	/**
+	 * Выполнить генерацию дерева заново из данных, содержащихся в БД.
+	 */
+	public synchronized void refreshTree() {
+		map.clear();
+		for (Container folder : Container.list()) {
+			tree = new TreeElement();
+			tree.setId(folder.getUuid().toString());
+			tree.setValue(folder.getName());
+			if(folder.getParentUuid().equals(GlobalProperties.ROOT_UUID)) {
+				key = folder.getUuid();
+			}
+			if (!map.containsKey(folder.getUuid())) {
+				map.put(folder.getUuid(), tree);
+			}
+			tree = null;
+		}
+		for (Container folder : Container.list()) {
+			if (map.containsKey(folder.getParentUuid())) {
+				map.get(folder.getParentUuid()).getData().add(map.get(folder.getUuid()));
+			}
+		}
+		root = new TreeElement();
+		root.setId("TheGodId");
+		root.getData().add(map.get(key));
+
+	}
+
+	/**
+	 * Создать новый контейнер в качестве дочернего для parentuuid.
+	 * @param parentuuid - идентификаторо родительского.
+	 * @param name - имя нового.
+	 * @param description - описание нового.
+	 * @param username - имя пользователя, создающего контейнер.
+	 * @return новый контейнер.
+	 */
+	public Container getNewContainer(String parentuuid, String name, String description, String username) {
+		def container = new Container(uuid: UUID.randomUUID(),
+		parentUuid: UUID.fromString(parentuuid),
+		name: name,
+		description: description,
+		freequota: 0,
+		maxquota: 0,
+		type: ContainerType.VIRTUAL).save(failOnError: true, flush: true);
+
+		def user = User.findByUsername(username)
+		if ((container != null) && (user != null)) {
+			container.addToUsers(user)
+			container.save(flush: true)
+			//текущий пользователь становится OWNER созданного контейнера
+			user.addToPermissions("${container.uuid}:${UserRole.OWNER.toString()}")
+			user.save(flush: true)
+		}
+
+		return container
+	}
+
+	/**
+	 * Удалить контейнер uuid. Также удаляются пользователи этого контейнера и
+	 * права пользователей контейнера. В случае успеха вызывается обновление
+	 * дерева.
+	 * @param uuid
+	 * @return true - удалено, false - удаление не произошло.
+	 */
+	public boolean delContainer(UUID uuid) {
+		def container = Container.findByUuid(uuid)
+		if (container != null) {
+
+			if (Container.findByParentUuid(uuid) == null) {
+
+				for (User user: container.users.findAll()) {
+					for (String perm : user.permissions.findAll {it.contains(uuid.toString())}) {
+						user.removeFromPermissions(perm)
+						user.save(flush: true)
+					}
+				}
+				container.delete(flush: true)
+				refreshTree()
+				return true
+			}
+		}
+		return false
+	}
+
+	/**
+	 * Изменить параметры контейнера uuid. После изменения обновляется дерево.
+	 * @param uuid
+	 * @param name
+	 * @param description
+	 * @param newmaxquota
+	 * @return
+	 */
+	public Container changeContainer(UUID uuid, String name,
+			String description, long newmaxquota) {
+		def container = Container.findByUuid(uuid)
+		if (container != null) {
+			container.name = name
+			container.description =description
+			container.save(flush: true)
+			def parent = Container.findByUuid(container.parentUuid)
+			//если квота не устанавливалась, т.е. f/m == 0/0
+			if (container.freeQuota == 0 && container.maxQuota == 0) {
+				if (newmaxquota <= parent.freeQuota) {
+					container.freeQuota = newmaxquota
+					container.maxQuota = newmaxquota
+					container.save(flush: true)
+					parent.freeQuota -= newmaxquota
+					parent.save(flush: true)
+				} else {
+					container.freeQuota = parent.freeQuota
+					container.maxQuota = parent.freeQuota
+					container.save(flush: true)
+					parent.freeQuota = 0
+					parent.save(flush: true)
+				}
+			}
+			//если квота уменьшается, т.е. newmaxquota < maxquota
+			if (newmaxquota < container.maxQuota) {
+				if (newmaxquota >= container.maxQuota - container.freeQuota) {
+					parent.freeQuota += (container.maxQuota - newmaxquota)
+					parent.save(flush: true)
+					container.freeQuota -= (container.maxQuota - newmaxquota)
+					container.maxQuota = newmaxquota
+					container.save(flush: true)
+				} else {
+					parent.freeQuota += container.freeQuota
+					parent.save(flush: true)
+					container.maxQuota -= container.freeQuota
+					container.freeQuota = 0
+					container.save(flush: true)
+				}
+			}
+			//если квота увеличивается, т.е. newmaxquota > maxquota
+			if (newmaxquota > container.maxQuota) {
+				if ((newmaxquota - container.maxQuota) <= parent.freeQuota) {
+					parent.freeQuota -= (newmaxquota - container.maxQuota)
+					parent.save(flush: true)
+					container.freeQuota += (newmaxquota - container.maxQuota)
+					container.maxQuota = newmaxquota
+					container.save(flush: true)
+				} else {
+					container.maxQuota += parent.freeQuota
+					container.freeQuota += parent.freeQuota
+					container.save(flush: true)
+					parent.freeQuota = 0
+					parent.save(flush: true)
+					
+				}
+				
+			}
+
+		}
+		refreshTree()
+		return container
+	}
+
+	private UiContainerTree() {
+
+	}
+}
