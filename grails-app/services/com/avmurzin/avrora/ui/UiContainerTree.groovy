@@ -5,6 +5,8 @@ import java.util.concurrent.ConcurrentHashMap
 import com.avmurzin.avrora.global.*
 import com.avmurzin.avrora.aux.ContainerType
 import com.avmurzin.avrora.sec.User
+import com.avmurzin.avrora.system.ShareControl
+import com.avmurzin.avrora.system.SmbShareControl
 
 /**
  * Генерация JSON-данных для элемента UI - дерево контейнеров на основе ссылки
@@ -85,6 +87,56 @@ class UiContainerTree {
 			user.addToPermissions("${container.uuid}:${UserRole.OWNER.toString()}")
 			user.save(flush: true)
 		}
+		refreshTree()
+		return container
+	}
+
+	/**
+	 * Создать новый контейнер-сетевой ресурс в качестве дочернего для parentuuid.
+	 * Сетевые ресурсы можно создавать только внутри VIRTUAL контейнера.
+	 * @param parentuuid - идентификаторо родительского.
+	 * @param name - имя нового.
+	 * @param description - описание нового.
+	 * @param username - имя пользователя, создающего контейнер.
+	 * @param ctype - тип создаваемого контейнера-ресурса
+	 * @return новый контейнер.
+	 */
+	public Container getNewShare(String parentuuid, String name,
+			String description, String username, ContainerType ctype) {
+
+		ShareControl shareControl;
+
+		def folder = Container.findByUuid(parentuuid);
+		if (folder.type != ContainerType.VIRTUAL) {
+			return null
+		}
+
+		def container = new Container(uuid: UUID.randomUUID(),
+		parentUuid: UUID.fromString(parentuuid),
+		name: name,
+		description: description,
+		freequota: 0,
+		maxquota: 0,
+		type: ctype).save(failOnError: true, flush: true);
+
+		def user = User.findByUsername(username)
+		if ((container != null) && (user != null)) {
+			container.addToUsers(user)
+			container.save(flush: true)
+			//текущий пользователь становится OWNER созданного контейнера
+			user.addToPermissions("${container.uuid}:${UserRole.OWNER.toString()}")
+			user.save(flush: true)
+		}
+		refreshTree()
+
+		switch (ctype) {
+			case ContainerType.SHARE_SMB:
+				shareControl = new SmbShareControl()
+				break;
+		}
+
+		shareControl.addShare(container.uuid.toString(), container.name,
+				container.description)
 
 		return container
 	}
@@ -178,9 +230,9 @@ class UiContainerTree {
 					container.save(flush: true)
 					parent.freeQuota = 0
 					parent.save(flush: true)
-					
+
 				}
-				
+
 			}
 
 		}

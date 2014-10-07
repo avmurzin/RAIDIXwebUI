@@ -34,8 +34,11 @@ class UrlMappings {
 		//Получить список всех пользователей конейнера uuid с их ролями
 		"/get_container_users/$uuid" (controller: "containerManipulation", action: "get_container_users")
 		
-		
-		"/share" (controller: "containerManipulation", action: "share")
+		//создать сетевой ресурс (контейнер типа SHARE_*) внутти parentuuid
+		// ?name=&description=&sharetype=SHARE_SMB|SHARE_FTP... (совпадает с типом конейнера)
+		"/share/$parentuuid" (controller: "containerManipulation", action: "share")
+		//временно закрыть сетевой ресурс
+		"/close_share/$uuid" (controller: "containerManipulation", action: "close_share")
 		
 		//Добавить права (в формате Apache Shiro) пользователю ?username=&permission= 
 		"/add_permission" (controller: "containerManipulation", action: "add_permission")

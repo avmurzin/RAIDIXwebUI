@@ -2,7 +2,8 @@ package com.avmurzin.avrora.aux;
 
 public enum ContainerType {
 	VIRTUAL,
-	RESOURCE;
+	SHARE_SMB,
+	UNSHARE_SMB;
 
 	ContainerType(){
 
