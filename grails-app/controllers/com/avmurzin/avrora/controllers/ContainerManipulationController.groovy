@@ -5,9 +5,7 @@ import com.avmurzin.avrora.aux.ContainerType
 import com.avmurzin.avrora.db.Container
 import com.avmurzin.avrora.global.ShareType
 import com.avmurzin.avrora.global.UserRole
-
 import org.apache.shiro.SecurityUtils
-
 import com.avmurzin.avrora.sec.User
 import com.avmurzin.avrora.system.*
 
@@ -260,7 +258,7 @@ class ContainerManipulationController {
 	 * ?name=&description=&sharetype=SMB|FTP..
 	 * Текущий пользователь получает право OWNER на созданный контейнер
 	 * Пользователи родительского никаких прав на дочерние не получают.
-	 * Доступ: ${parentuuid}:OWNER || ${parentuuid}:ADMIN || ${parentuuid}:MANAGER
+	 * +Доступ: ${parentuuid}:OWNER || ${parentuuid}:ADMIN || ${parentuuid}:MANAGER
 	 * @return JSON - UUID идентификатор созданного контейнера.
 	 */
 	def share() {
@@ -302,6 +300,88 @@ class ContainerManipulationController {
 		}
 	}
 	
+
+	/**
+	 * Временное закрытие шары uuid (удаляется конфиг, но не удаляются данные)
+	 * Тип шары определяется по типу контейнера (SHARE_*).
+	 * +Доступ: ${parentuuid}:OWNER || ${parentuuid}:ADMIN || ${parentuuid}:MANAGER
+	 * @return JSON - закрытый контейнер
+	 */
+	def close_share() {
+		String cuuid = params.uuid;
+		UiContainerTree tree1 = UiContainerTree.getInstance();
+		def container = Container.findByUuid(UUID.fromString(cuuid))
+		if (SecurityUtils.subject.isPermitted("${cuuid}:${UserRole.OWNER.toString()}") ||
+		SecurityUtils.subject.isPermitted("${cuuid}:${UserRole.ADMIN.toString()}") ||
+		SecurityUtils.subject.isPermitted("${cuuid}:${UserRole.MANAGER.toString()}"))
+		{
+			if (tree1.closeShare(UUID.fromString(cuuid)) && (container != null)) {
+				render(contentType: "application/json") {
+					result = true
+					uuid = container.uuid.toString()
+					value = container.name
+					image = container.type.toString()
+				}
+			} else {
+				render(contentType: "application/json") {
+					result = false
+					message = "Невозможно закрыть ресурс. Обратитесь к администратору"
+				}
+			}
+		} else {
+			render(contentType: "application/json") {
+				result = false
+				message = "Недостаточно прав"
+			}
+		}
+	}
+	
+	/**
+	 * Открыть ранее созданную шару.
+	 * Тип шары определяется по типу контейнера (SHARE_*).
+	 * +Доступ: ${parentuuid}:OWNER || ${parentuuid}:ADMIN || ${parentuuid}:MANAGER
+	 * @return JSON - открытый контейнер
+	 */
+	def open_share() {
+		String cuuid = params.uuid;
+
+		if (SecurityUtils.subject.isPermitted("${cuuid}:${UserRole.OWNER.toString()}") ||
+		SecurityUtils.subject.isPermitted("${cuuid}:${UserRole.ADMIN.toString()}") ||
+		SecurityUtils.subject.isPermitted("${cuuid}:${UserRole.MANAGER.toString()}"))
+		{
+			UiContainerTree tree1 = UiContainerTree.getInstance();
+
+//			Container container = tree1.getNewShare(parentuuid, cname,
+//					description, SecurityUtils.subject.getPrincipal().toString(),
+//					ctype)
+			
+			
+			def container = Container.findByUuid(UUID.fromString(cuuid))
+			
+			def res = tree1.openShare(UUID.fromString(cuuid))
+			
+			if ((container != null) && res) {
+				render(contentType: "application/json") {
+					result = true
+					uuid = container.uuid.toString()
+					value = container.name
+					image = container.type.toString()
+				}
+			} else {
+				render(contentType: "application/json") {
+					result = false
+					message = "Невозможно создать ресурс. Обратитесь к администратору"
+				}
+			}
+
+
+		} else {
+			render(contentType: "application/json") {
+				result = false
+				message = "Недостаточно прав"
+			}
+		}
+	}
 
 	/**
 	 * Добавить права (в формате Apache Shiro)  пользователю ?username=&permission=.

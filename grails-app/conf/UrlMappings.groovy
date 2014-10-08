@@ -39,6 +39,8 @@ class UrlMappings {
 		"/share/$parentuuid" (controller: "containerManipulation", action: "share")
 		//временно закрыть сетевой ресурс
 		"/close_share/$uuid" (controller: "containerManipulation", action: "close_share")
+		//открыть ранее закрытый ресурс
+		"/open_share/$uuid" (controller: "containerManipulation", action: "open_share")
 		
 		//Добавить права (в формате Apache Shiro) пользователю ?username=&permission= 
 		"/add_permission" (controller: "containerManipulation", action: "add_permission")

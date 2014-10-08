@@ -43,6 +43,7 @@ class UiContainerTree {
 			tree = new TreeElement();
 			tree.setId(folder.getUuid().toString());
 			tree.setValue(folder.getName());
+			tree.setImage(folder.type.toString())
 			if(folder.getParentUuid().equals(GlobalProperties.ROOT_UUID)) {
 				key = folder.getUuid();
 			}
@@ -139,6 +140,48 @@ class UiContainerTree {
 				container.description)
 
 		return container
+	}
+
+	/**
+	 * Временное закрытие шары uuid.		
+	 * @return
+	 */
+	public boolean closeShare(UUID uuid) {
+		ShareControl shareControl;
+		def container = Container.findByUuid(uuid)
+
+		switch (container.type) {
+			case ContainerType.SHARE_SMB:
+				shareControl = new SmbShareControl()
+				container.type = ContainerType.UNSHARE_SMB
+				container.save(flush: true)
+				break;
+			default: return false
+				break;
+		}
+		return shareControl.closeShare(uuid.toString()).result
+	}
+
+	/**
+	 * Открытие ранее созданной шары.
+	 * @param uuid
+	 * @return
+	 */
+	public boolean openShare(UUID uuid) {
+		ShareControl shareControl;
+		def container = Container.findByUuid(uuid)
+
+		switch (container.type) {
+			case ContainerType.UNSHARE_SMB:
+				shareControl = new SmbShareControl()
+				container.type = ContainerType.SHARE_SMB
+				container.save(flush: true)
+				break;
+			default: return false
+				break;
+		}
+
+		return shareControl.addShare(uuid.toString(), container.name, container.description).result
 	}
 
 	/**

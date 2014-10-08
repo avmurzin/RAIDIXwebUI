@@ -4,9 +4,12 @@ import java.io.BufferedReader
 
 import com.avmurzin.avrora.global.ReturnMessage
 import com.sun.xml.internal.ws.api.config.management.policy.ManagedServiceAssertion.ImplementationRecord;
-
+import com.avmurzin.avrora.aux.ContainerType
 import java.io.InputStreamReader
 import java.util.regex.Pattern
+import com.avmurzin.avrora.db.Container
+import com.avmurzin.avrora.global.UserRole
+import com.avmurzin.avrora.sec.User
 
 /**
  * Управление файлами конфигурации Samba. 
@@ -18,33 +21,62 @@ class SmbShareControl implements ShareControl {
 	ReturnMessage returnMessage = new ReturnMessage()
 
 	/**
-	 * Добавление ресурса.
+	 * Добавление ресурса (открытие ранее созданного).
 	 * Для каждой шары в каталоге config.smb.confdir
 	 * создается отдельный файл с описанием ресурса. На созданный файл в файле
 	 * config.smb.rootconf создается ссылка (include = ...). В свою очередь файл
 	 * /etc/smb.conf содержит ссылку на config.smb.rootconf
+	 * Сам ресурс создается в папке ${config.smb.sharefolder}/${name}-${uuid.getAt(1..4)}
+	 * и имеет то же сетевое имя
 	 * После изменения конфигурации необходимо перестартовать демон smb
 	 * @param uuid - идентификатор контейнера (типа SHARE_*)
 	 * @param name
-	 * @return
+	 * @return в случае успеха true
 	 */
 	@Override
 	public ReturnMessage addShare(String uuid, String name, String description) {
 		def config = new ConfigSlurper().parse(new File('ConfigSlurper/avrora.groovy').toURI().toURL())
+		
+		//если конфиг для шары есть, то он сначала будет удален
+		closeShare(uuid)
+		
 		//создание папки для расшаривания
-		def folder = new File("${config.smb.sharefolder}/${uuid}/${name}")
+		def folder = new File("${config.smb.sharefolder}/${name}-${uuid.getAt(1..4)}")
 		if( !folder.exists() ) {
 			folder.mkdirs()
 		}
 
 		//подготовка конфига для шары
-		def confText = "[${uuid}-${name}]\n" +
+		def confText = "[${name}-${uuid.getAt(1..4)}]\n" +
 				"comment = text\n" +
-				"path = ${config.smb.sharefolder}/${uuid}/${name}\n" +
-				"public = yes\n" +
-				"writable = no\n" +
-				"force user = murzin\n" +
-				"force group = murzin\n"
+				"path = ${config.smb.sharefolder}/${name}-${uuid.getAt(1..4)}\n" +
+				"browseable = yes\n"
+				
+				def container = Container.findByUuid(UUID.fromString(uuid))
+				def users = container.users.findAll()
+				def rolist = "read list = "
+				def rwlist = "write list = "
+
+				for (User user : users) {
+					for(UserRole role : UserRole.values()) {
+	
+						def perm = user.permissions.find {it == "${uuid}:${role.toString()}"}
+						//println perm
+						if (perm != null) {
+							//out.put("${user.username}", "${role}")
+							if (role == UserRole.ROUSER) {
+								rolist += " ${user.username},"
+							}
+							if (role == UserRole.RWUSER) {
+								rwlist += " ${user.username},"
+							}
+						}
+						perm = null;
+					}
+				}
+
+		confText += "${rolist} fake\n"
+		confText += "${rwlist} fake\n"
 
 		//файл с добавочным конфигом
 		new File( "${config.smb.confdir}", "${uuid}.conf" ).withWriterAppend { w ->
@@ -102,16 +134,25 @@ class SmbShareControl implements ShareControl {
 	@Override
 	public ReturnMessage closeShare(String uuid) {
 		def config = new ConfigSlurper().parse(new File('ConfigSlurper/avrora.groovy').toURI().toURL())
+		try {
+			
+			//удаление ссылки в рутовом файле
+			def rootconf = new File( "${config.smb.rootconf}" )
+			processFileInplace(rootconf) { text ->
+				Pattern p = Pattern.compile(".*${uuid}.*\n")
+				text.replaceAll(p, '')
+			}
+			//удаление файла с добавочным конфигом
+			new File( "${config.smb.confdir}", "${uuid}.conf" ).delete()
 
-		//удаление ссылки в рутовом файле
-		def rootconf = new File( "${config.smb.rootconf}" )
-		processFileInplace(rootconf) { text ->
-			Pattern p = Pattern.compile(".*${uuid}.*\n")
-			//println p.toString()
-			//println "123"
-			text.replaceAll(p, '')
+			returnMessage.setMessage("Доступ к ресурсу закрыт")
+			returnMessage.setResult(true)
+
+		}  catch (Exception e) {
+			returnMessage.setMessage(e.message)
+			returnMessage.setResult(false)
 		}
-		return null;
+		return returnMessage
 	}
 
 	def processFileInplace(file, Closure processText) {

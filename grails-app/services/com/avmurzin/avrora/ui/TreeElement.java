@@ -15,6 +15,7 @@ import com.avmurzin.avrora.ui.TreeElement;
 public class TreeElement {
 	private String id;
 	private String value;
+	private String image;
 	private Collection<TreeElement> data;
 	
 	public TreeElement() {
@@ -38,5 +39,11 @@ public class TreeElement {
 	}
 	public void setData(List<TreeElement> data) {
 		this.data = data;
+	}
+	public String getImage() {
+		return image;
+	}
+	public void setImage(String image) {
+		this.image = image;
 	}
 }
