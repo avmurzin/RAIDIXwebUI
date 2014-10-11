@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html>
+   <head>
+       <meta http-equiv=Content-Type content="text/html; charset=utf-8">
+       <link rel="stylesheet" href="codebase/webix.css" type="text/css" media="screen" charset="utf-8">
+       <script src="codebase/webix.js" type="text/javascript" charset="utf-8"></script>
+       <title></title>
+   </head>
+<body>
+<div>
+<script type="text/javascript" charset="utf-8">
+
+	var form = {
+		view : "form", 
+		id : "myform", 
+		elements : [ {view : "text", id : "form_name", label : '', name : "name", placeholder : "Имя контейнера"}, 
+		             {view : "text", label : '', name : "description", placeholder : "Описание"}, 
+		             {view : "button", value : "Создать", on : {
+		            	 'onItemClick' : addTreeItem
+		            	 }
+		} ]
+	};
+
+	function add_row() {
+		var request = "/new_folder/" + $$("mytree").getSelectedId() + "?name="
+				+ $$("log_form").getValues().foldername;
+		webix.message(request);
+		webix.ajax(request, function(text, data) {
+			//webix.message(text); //show server side response
+			//webix.message(data.json().description);
+
+			//    $$("mylist").add({
+			//	uuid: data.json().uuid,
+			//        description: data.json().description,
+			//        ownerUsers: data.json().ownerUsers.name,
+			//    })
+		});
+	}
+
+
+
+
+
+
+	function addTreeItem() {
+		 $$("my_win").hide();
+		 var name = $$("myform").getValues().name;
+		 var description = $$("myform").getValues().description;
+		 var tree_id = $$("mytree").getSelectedId();
+		 //var new_id = $$("myform").getValues().new_id;
+		 $$("myform").clear();
+		 
+	     var request = "new_container/" + tree_id + "?name=" + name + "&description=" + description;
+	      //webix.message(request);
+	      //webix.modalbox(request);
+
+	      
+	      
+		webix.ajax(request, function(text, data) {
+	        //$$("mytree").add({id : data.json(), value : name}, 0, tree_id);
+	        $$("mytree").add({id : text, value : name, image : image}, 0, tree_id);
+		});
+
+	}
+
+	webix.ui({
+		width : 800,
+		rows : [ {
+			view : "toolbar",
+			elements : [ { view:"button", id: "button1", value:"Refresh Tree", width:100, click: "add_tree()" }]
+		}, {
+			cols : [ {
+				view : "tree",
+				id : "mytree",
+				select : true,
+				type:"lineTree",
+				template:"{common.icon()} <img src='images/#image#.gif' style='float:left; margin:3px 4px 0px 1px;'> <span>#value#</span>",
+				data : [{id: "123", value: "value", image: "VIRTUAL"}]
+			},
+			{
+				view : "resizer"
+			},
+			{
+				rows : [{
+					view:"textarea", 
+					id:"folder_description",
+					label:"Описание контейнера", 
+					labelAlign:"center", labelPosition:"top", height:100, 
+					placeholder:"Нет описания",
+					value: ""
+				},
+				{view:"label", label:"Список пользователей", align:"center"},
+				{
+		                view:"list", 
+		                id:"userlist",
+		                height:300,
+		                template:"<b>#name#</b> <div style='padding-left:18px'> Role: <i>#role#</i> </div>",
+		                type:{
+		                    height:62
+		                },
+		                select:true,
+		                data:[]
+				},
+				{
+					
+				}
+				        ]
+
+			}
+			]
+		} ]
+	}).show();
+
+	webix.ui({
+		view : "window",
+		id : "my_win",
+		head : "<i>Создать контейнер</i>",
+		body : {
+			rows : [ webix.copy(form), {
+				view : "button",
+				id: "cancel1",
+				label : "Отменить",
+				click : ("$$('my_win').hide();")
+			} ]
+		}
+	})
+
+$$("cancel1").attachEvent("onItemClick", function(){$$("my_win").hide();});
+
+
+	webix.ui({
+		view : "contextmenu",
+		width:210,
+		id : "my_menu",
+		
+		data : [ {
+			id : "add",
+			value : "Новый_контейнер"
+		}, {
+			id : "adduser",
+			value : "Добавить_пользователя"
+		}, {
+			id : "share",
+			value : "Samba share"
+		}, {
+			$template : "Separator"
+		}, {
+			id : "info",
+			value : "Отменить"
+		} ],
+		master : $$("mytree")
+	});
+
+	function add_tree() {
+	//alert("123");
+		$$("mytree").clearAll();
+		webix.ajax("get_tree/", function(text, data) {
+			webix.message(text); //show server side response
+			//webix.message(data.json().description);
+			// webix.message(data.json());
+			
+			$$("mytree").parse(data.json());
+			$$("mytree").openAll();
+			$$("mytree").refresh();
+
+		});
+	}
+
+	function addFolderForm(id) {
+		$$('my_win').show();
+	}
+
+	$$("my_menu").attachEvent("onItemClick", function(id) {
+		var context = this.getContext();
+		var tree = context.obj;
+		var treeId = context.id;
+		tree.select(treeId);
+		if (id == "add") {
+			addFolderForm(treeId);
+		}
+		if (id == "adduser") {
+			addUserToFolderWindow(treeId);
+		}
+	    if (id == "share") {
+	        makeSamba(treeId);
+	    }
+	});
+
+    function getFolderUsers(id) {
+        var request = "get_container_users/" + id;
+        //webix.modalbox(request);
+        $$("userlist").clearAll();
+        webix.ajax(request, function(text, data) {
+          //webix.message(data.json());
+            $$("userlist").parse(data.json());
+        });       
+    }
+	
+	
+	$$("my_menu").attachEvent("onShow", function(id) {
+		var context = this.getContext();
+		var tree = context.obj;
+		var treeId = context.id;
+		tree.select(treeId);
+	
+		var request = "container_properties/" + treeId;
+        //webix.message(request);
+        webix.ajax(request, function(text, data) {
+            //webix.message(data.json().id);
+            $$("folder_description").setValue(data.json().description);
+        });
+        getFolderUsers(treeId);
+	});
+
+
+
+	$$("button1").attachEvent("onItemClick", add_tree());
+	
+	
+	
+
+	$$("mytree").attachEvent("onItemClick", function(id) {
+		$$("mytree").select(id);
+	
+		var request = "container_properties/" + id;
+        //webix.message(request);
+        webix.ajax(request, function(text, data) {
+            //webix.message(data.json().id);
+            $$("folder_description").setValue(data.json().description);
+        });
+        getFolderUsers(treeId);
+	});
+	
+
+
+	
+		
+    webix.ui({
+        view : "window",
+        id : "addUserWindow",
+        head : "<i>Добавить пользователя</i>",
+        body : {
+            rows : [ 
+            {
+                view:"list", 
+                id:"adduserlist",
+                height:300,
+                
+                type:{
+                    height:50
+                },
+                select:true,
+                //data:[]
+            },
+            {
+                
+                view : "form", 
+                id : "adduserform", 
+                elements : [{
+                view:"select", 
+                name:"adduserselect",
+                  options:[{id:"ADMINISTRATOR", value: "ADMINISTRATOR"},
+                           {id:"MANAGER", value: "MANAGER"},
+                           {id:"USER_RO", value: "USER_RO"},
+                           {id:"USER_RW", value: "USER_RW"},
+                           {id:"ANONYMOUS", value: "ANONYMOUS"}]
+                },{view : "button", value : "Добавить", on : {
+                    'onItemClick' : addUserToFolder
+                }
+                 }]
+                
+            }
+                     , {
+                view : "button",
+                label : "Отменить",
+                click : ("$$('addUserWindow').hide();")
+            } ]
+        }
+    })	
+  
+    function addUserToFolderWindow(id) {
+		$$('addUserWindow').show();
+        var request = "all_users/";
+        //$$("adduserselect").options = "value:"+id+"}";
+        //$$("userlist").clearAll();
+        webix.ajax(request, function(text, data) {
+        	$$("adduserlist").parse(data.json());
+        }); 
+		
+	}
+    
+	function addUserToFolder() {
+
+	       $$("addUserWindow").hide();
+	         var role = $$("adduserform").getValues().adduserselect;
+	         var user_id = $$("adduserlist").getSelectedId();
+	         //var description = $$("myform").getValues().description;
+	         var tree_id = $$("mytree").getSelectedId();
+	         //var new_id = $$("myform").getValues().new_id;
+	         //$$("myform").clear();
+	         
+	         var request = "user_to_folder/" + user_id + "/" + tree_id + "?role=" + role;
+	         
+	        webix.ajax(request, function(text, data) {
+	            //$$("mytree").add({id : data.json(), value : name}, 0, tree_id);
+	            //getFolderUsers(tree_id);
+	        });
+		getFolderUsers(tree_id);
+	}
+
+    function makeSamba(id) {
+        $$('sambaconf').show();
+        var request = "share_smb/" + id;
+        //$$("adduserselect").options = "value:"+id+"}";
+        //$$("userlist").clearAll();
+        webix.ajax(request, function(text, data) {
+            $$("sambatext").setHTML(text);
+            //$$("sambatext").setHTML(data.json());
+        }); 
+        
+    }
+	
+	var samba = "asdfasdf";
+	
+	   webix.ui({
+	        view : "window",
+	        id : "sambaconf",
+	        move:true,
+	        head : "<i>SAMBA configuration</i>",
+	        body : {
+	        	rows:[
+	                  {view:"template",
+	                  id: "sambatext",
+	                  height:300,
+	                  template:""},
+	                  {
+	                      view : "button",
+	                      label : "Закрыть",
+	                      click : ("$$('sambaconf').hide();")
+	                  } 
+	        	]
+
+	        }
+	    })
+</script>
+</div>
+</body>
+</html>

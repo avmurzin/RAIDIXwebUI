@@ -15,6 +15,7 @@ class Container {
 	long maxQuota; //максимальная разрешенная емкость контейнера, bytes
 	long freeQuota;//текущая свободная емкость контейнера, bytes 
 	ContainerType type;
+	String sharepath;
 	
 	static mapping = {
 		table "container";
@@ -25,6 +26,7 @@ class Container {
 		maxQuota column: "maxquota", sqlType: "bigint", length: 20;
 		freeQuota column: "freequota", sqlType: "bigint", length: 20;
 		type column: "type";
+		sharepath column: "sharepath";
 	}
 	
 	static hasMany = [users:User]

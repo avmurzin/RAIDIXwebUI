@@ -19,6 +19,7 @@ class ContainerManipulationController {
 
 	def index() {
 		//TODO: редиректить на процедуру создания базового интерфейса.
+		redirect(url: "/index.html")
 	}
 
 	/**
@@ -62,6 +63,8 @@ class ContainerManipulationController {
 			render(contentType: "application/json") {
 				result = true
 				uuid = container.uuid.toString()
+				value = container.name
+				image = container.type.toString()
 			}
 		} else {
 			render(contentType: "application/json") {
@@ -79,6 +82,7 @@ class ContainerManipulationController {
 	 * @return JSON result = true|false и при успехе uuid удаленного контейнера.
 	 */
 	def del_container() {
+		//TODO: при удалении контейнера следует освобождать квоту
 		String cuuid = params.uuid;
 		if (SecurityUtils.subject.isPermitted("${cuuid}:${UserRole.OWNER.toString()}")) {
 			UiContainerTree tree1 = UiContainerTree.getInstance();
@@ -166,6 +170,7 @@ class ContainerManipulationController {
 		String uuid = params.uuid;
 		String username = params.username;
 		UserRole role = params.role;
+		UiContainerTree tree1 = UiContainerTree.getInstance();
 
 		if (SecurityUtils.subject.isPermitted("${uuid}:${UserRole.OWNER.toString()}")) {
 			def container = Container.findByUuid(UUID.fromString(uuid))
@@ -175,10 +180,17 @@ class ContainerManipulationController {
 				container.save(flush: true)
 				user.addToPermissions("${uuid}:${role.toString()}")
 				user.save(flush: true)
-			}
-			render(contentType: "application/json") {
-				result = true
-				//message = "Недостаточно прав"
+				tree1.refreshShareConfig(container)
+				render(contentType: "application/json") {
+					result = true
+					//message = "Недостаточно прав"
+				}
+
+			} else {
+				render(contentType: "application/json") {
+					result = false
+					message = "Пользователя или контейнера не существует"
+				}
 			}
 		} else {
 			render(contentType: "application/json") {
@@ -198,7 +210,8 @@ class ContainerManipulationController {
 	def del_container_user() {
 		String uuid = params.uuid;
 		String username = params.username;
-
+		UiContainerTree tree1 = UiContainerTree.getInstance();
+//TODO: если удалить себя и списка пользователей, то оппа...
 		if (SecurityUtils.subject.isPermitted("${uuid}:${UserRole.OWNER.toString()}")) {
 			def container = Container.findByUuid(UUID.fromString(uuid))
 			def user = User.findByUsername(username)
@@ -212,6 +225,7 @@ class ContainerManipulationController {
 					user.removeFromPermissions(perm)
 					user.save(flush: true)
 				}
+				tree1.refreshShareConfig(container)
 			}
 			render(contentType: "application/json") {
 				result = true

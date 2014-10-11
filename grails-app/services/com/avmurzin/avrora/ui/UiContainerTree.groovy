@@ -78,7 +78,8 @@ class UiContainerTree {
 		description: description,
 		freequota: 0,
 		maxquota: 0,
-		type: ContainerType.VIRTUAL).save(failOnError: true, flush: true);
+		type: ContainerType.VIRTUAL,
+		sharepath: 'xxx').save(failOnError: true, flush: true);
 
 		def user = User.findByUsername(username)
 		if ((container != null) && (user != null)) {
@@ -112,16 +113,23 @@ class UiContainerTree {
 			return null
 		}
 
+		//если такая шара уже существует, то добавить набор цифр к имени
+		if (Container.findByNameAndTypeNotEqual(name, ContainerType.VIRTUAL) != null) {
+			name += "-${UUID.randomUUID().toString().getAt(1..4)}"
+		}
+
 		def container = new Container(uuid: UUID.randomUUID(),
 		parentUuid: UUID.fromString(parentuuid),
 		name: name,
 		description: description,
 		freequota: 0,
 		maxquota: 0,
-		type: ctype).save(failOnError: true, flush: true);
+		type: ctype,
+		sharepath: 'xxx').save(failOnError: true, flush: true);
 
 		def user = User.findByUsername(username)
 		if ((container != null) && (user != null)) {
+
 			container.addToUsers(user)
 			container.save(flush: true)
 			//текущий пользователь становится OWNER созданного контейнера
@@ -192,10 +200,12 @@ class UiContainerTree {
 	 * @return true - удалено, false - удаление не произошло.
 	 */
 	public boolean delContainer(UUID uuid) {
+		ShareControl shareControl;
 		def container = Container.findByUuid(uuid)
 		if (container != null) {
 
-			if (Container.findByParentUuid(uuid) == null) {
+			//если контейнер виртуальный, то проконтролировать наличие дочерних
+			if ((Container.findByParentUuid(uuid) == null) && (container.type.equals(ContainerType.VIRTUAL))) {
 
 				for (User user: container.users.findAll()) {
 					for (String perm : user.permissions.findAll {it.contains(uuid.toString())}) {
@@ -203,9 +213,32 @@ class UiContainerTree {
 						user.save(flush: true)
 					}
 				}
+				//перед удалением освободить квоту
+				changeContainer(uuid,"","",0)
 				container.delete(flush: true)
 				refreshTree()
 				return true
+			}
+
+			//если контейнер невирутальный, то контроль наличия дочерних возлагается на обработчик расшаривания
+			if (!container.type.equals(ContainerType.VIRTUAL)) {
+
+				switch (container.type) {
+					case ContainerType.UNSHARE_SMB: case ContainerType.SHARE_SMB:
+						shareControl = new SmbShareControl()
+						break;
+					default: return false
+						break;
+				}
+
+				if (shareControl.delShare(uuid.toString()).result) {
+					//перед удалением освободить квоту
+					changeContainer(uuid,"","",0)
+					container.delete(flush: true)
+					refreshTree()
+					return true
+				}
+
 			}
 		}
 		return false
@@ -221,6 +254,7 @@ class UiContainerTree {
 	 */
 	public Container changeContainer(UUID uuid, String name,
 			String description, long newmaxquota) {
+
 		def container = Container.findByUuid(uuid)
 		if (container != null) {
 			container.name = name
@@ -277,11 +311,31 @@ class UiContainerTree {
 				}
 
 			}
-
+			refreshShareConfig(container)
 		}
 		refreshTree()
 		return container
 	}
+
+
+	/**
+	 * Обновление конфига для контейнера типа SHARE_*
+	 * @param container
+	 * @return
+	 */
+	public boolean refreshShareConfig(Container container) {
+		ShareControl shareControl;
+
+		switch (container.type) {
+			case ContainerType.SHARE_SMB:
+				shareControl = new SmbShareControl()
+				break;
+			default: return false
+				break;
+		}
+		return shareControl.addShare(container.uuid.toString(), container.name, container.description).result
+	}
+
 
 	private UiContainerTree() {
 

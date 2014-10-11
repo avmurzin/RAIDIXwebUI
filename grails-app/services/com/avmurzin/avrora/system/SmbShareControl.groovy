@@ -40,19 +40,44 @@ class SmbShareControl implements ShareControl {
 		//если конфиг для шары есть, то он сначала будет удален
 		closeShare(uuid)
 		
+		def container = Container.findByUuid(UUID.fromString(uuid))
+		
+		// выйти, если контейнер виртуальный или не найден
+		if (container.type.equals(ContainerType.VIRTUAL)  || container == null) {
+			returnMessage.setResult(false)
+			returnMessage.setMessage("Контейнер не поддерживает операцию или не существует")
+			return returnMessage
+		}
+		
+		//имя самой шары
+		def sharename = "${name}"
+		//имя каталога, который будет расшарен
+		//def sharepath = "${config.smb.sharefolder}/${name}-${uuid.getAt(1..4)}"
+		def sharepath = "${config.smb.sharefolder}/${name}"
+		
+		//если текущее имя расшаренного каталога не соответствует прошлому
+		if (!container.sharepath.equals(sharepath) && !container.sharepath.equals("")) {
+			def folder = new File(container.sharepath)
+			if( folder.exists() ) {
+				folder.renameTo(new File(sharepath))
+			}
+			container.sharepath = sharepath
+			container.save(flush: true)
+		}
+		
 		//создание папки для расшаривания
-		def folder = new File("${config.smb.sharefolder}/${name}-${uuid.getAt(1..4)}")
+		def folder = new File(sharepath)
 		if( !folder.exists() ) {
 			folder.mkdirs()
 		}
 
 		//подготовка конфига для шары
-		def confText = "[${name}-${uuid.getAt(1..4)}]\n" +
+		def confText = "[${sharename}]\n" +
 				"comment = text\n" +
-				"path = ${config.smb.sharefolder}/${name}-${uuid.getAt(1..4)}\n" +
+				"path = ${sharepath}\n" +
 				"browseable = yes\n"
 				
-				def container = Container.findByUuid(UUID.fromString(uuid))
+				
 				def users = container.users.findAll()
 				def rolist = "read list = "
 				def rwlist = "write list = "
@@ -127,7 +152,28 @@ class SmbShareControl implements ShareControl {
 	@Override
 	public ReturnMessage delShare(String uuid) {
 		// TODO Auto-generated method stub
-		return null;
+		def container = Container.findByUuid(UUID.fromString(uuid))
+		if (container != null) {
+			def currentDir = new File(container.sharepath)
+			def files = []
+			currentDir.eachFileMatch(~/^.*$/) { files << it.name }
+			if (files.empty) {
+				closeShare(uuid)
+				currentDir.deleteDir()
+				returnMessage.setMessage("Каталог успешно удален")
+				returnMessage.setResult(true)
+			} else {
+				returnMessage.setMessage("Каталог не пуст")
+				returnMessage.setResult(false)
+			}
+		} else {
+			returnMessage.setMessage("Каталог не существует")
+			returnMessage.setResult(false)
+		}	
+		
+		
+		
+		return returnMessage;
 	}
 
 

@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html>
+    <head>
+     <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+        <link rel="stylesheet" href="codebase/webix.css" type="text/css" media="screen" charset="utf-8">
+        <script src="codebase/webix.js" type="text/javascript" charset="utf-8"></script>
+        <style>
+
+            .blue.webix_menu-x{
+                background:#3498DB;
+            }
+        </style>
+        
+        <title>Menu in Toolbar</title>
+    </head>
+    <body>
+<script type="text/javascript" charset="utf-8">
+
+    //содержимое главного меню
+    var menu_data = [
+        { id:"1",value:"Контейнер", submenu:[
+            {id: "1.1", value: "Создать"}, 
+            {id: "1.2", value: "Изменить"},
+            {id: "1.3", value: "Удалить"}
+        ]},
+        { id:"2",value:">>>>", submenu:[ "Facebook", "Google+", "Twitter" ]},
+        { id:"3",value:"Info" }
+    ];
+    
+    //объект главного меню
+    var menu = {
+        view:"menu",
+        data: menu_data,
+        css:"blue",
+        type:{
+            subsign:true
+        },
+        on:{
+            onMenuItemClick:function(id){
+                menuSelect(id);
+            }
+            }
+    };
+ 
+    //тулбар справа от главного меню
+    var toolbar = {
+            view:"toolbar", paddingY:0,  elements:[
+                {}, 
+                { },
+                { view:"button", label:"Выйти", width:100 }
+            ]
+        };
+    
+    //дерево контейнеров (левый блок)
+    var container_tree = {
+        view : "tree",
+        id : "container_tree",
+        select : true,
+        type:"lineTree",
+        template:"{common.icon()} <img src='images/#image#.gif' style='float:left; margin:3px 4px 0px 1px;'> <span>#value#</span>",
+        data : [{id: "123", value: "Требуется залогиниться", image: "VIRTUAL"}],
+        on:{
+            onItemClick:function(id){
+            	container_properties(id);
+            }
+           }
+    };
+
+    //блок свойств контейнера для демонстрации в правом блоке
+    var container_sheet = {
+    		view:"property",  id:"container_properties",
+    		editable: true,
+    		elements:[
+                       { label:"Общие свойства", type:"label" },
+                       { label:"Имя", type:"text", id:"container_name", value: ""},
+                       { label:"Описание", type:"text", id:"container_description", value: ""},
+                       { label:"Id", type:"text", id:"container_uuid", value: ""},
+                       { label:"Квоты (мбайт)", type:"label" },
+                       { label:"Максимум", type:"text", id:"container_maxquota", value: ""},
+                       { label:"Свободно", editable: "false", type:"text", id:"container_freequota", value: ""}
+    		          ]
+    		
+    }
+    
+    
+    //верстка страницы интерфейса
+    webix.ui({
+        rows:[
+            {type:"clean", cols: [menu,toolbar]},
+            { cols: [container_tree,{view:"resizer"},{cols:[container_sheet]}]}
+        ]
+    });
+    
+    
+    //получить свойства контейнера, на котором кликнули
+    function container_properties(id) {
+    	webix.ajax("container_properties/"+id, function(text, data) {
+    		$$("container_properties").setValues({
+    			container_name:data.json().name,
+    			container_description:data.json().description,
+    			container_uuid:data.json().uuid,
+    			container_maxquota:data.json().maxquota,
+    			container_freequota:data.json().freequota
+
+    	    });
+        
+
+        });
+    };
+
+    
+    //обработка меню
+    function menuSelect(id) {
+    	switch(id) {
+        case "1.1":
+        	new_container();
+             break;
+        case "1.2":
+            break;
+        case "1.3":
+        	del_container();
+            break;
+        default:
+            
+    }
+    };
+    
+    //удаление выделенного контейнера
+    function del_container() {
+    	var tree_id = $$("container_tree").getSelectedId();
+    	webix.ajax("del_container/" + tree_id, function(text, data) {
+    		if (data.json().result == false) {
+    			webix.alert(data.json().message);
+    		} else {
+    			load_tree();
+    		}
+    	});
+    };
+    
+    //загрузить дерево в интерфейс
+    function load_tree() {
+    	 $$("container_tree").clearAll();
+         webix.ajax("get_tree/", function(text, data) {
+             $$("container_tree").parse(data.json());
+             $$("container_tree").openAll();
+             $$("container_tree").refresh();
+
+         });
+    }
+
+    var new_container_form = {};
+    
+    //добавить новый контейнер
+    function new_container() {
+    	var tree_id = $$("container_tree").getSelectedId();
+    	if (tree_id == "") {
+     		webix.alert("Выберете контейнер, в котором будет создан новый");
+    	} else {
+    		var max = $$('container_properties').getValues().container_freequota;
+    		webix.message(max);
+    	    new_container_form = {
+    	            view : "form", 
+    	            id : "myform", 
+    	            elements : [ {view : "text", id : "form_name", label : 'Имя', name : "name", placeholder : "Имя контейнера"}, 
+    	                         {view : "text", label : 'Описание', name : "description", placeholder : "Описание"}, 
+    	                         {view : "counter", id: "maxq", step: 10, max: max, label : 'Квота, Мб', name : "maxquota"},
+    	                         {view : "button", value : "Создать", on : {
+    	                        	 onItemClick:function(){
+    	                                 make_container();
+    	                             }
+    	                             }
+    	            } ]
+    	        };
+    		
+    	    //окно добавления нового контейнера
+    	    webix.ui({
+    	        view : "window",
+    	        position:"center",
+    	        id : "new_container",
+    	        head : "<i>Создать контейнер</i>",
+    	        body : {
+    	            rows : [ new_container_form, {
+    	                view : "button",
+    	                id: "cancel1",
+    	                label : "Отменить",
+    	                click : ("$$('new_container').hide();")
+    	            } ]
+    	        }
+    	    });
+    	    
+    		$$('new_container').show();
+    	}
+    	
+    };
+    
+    function make_container() {
+    	var tree_id = $$("container_tree").getSelectedId();
+    	var name = $$('myform').getValues().name;
+    	var description = $$('myform').getValues().description;
+    	var maxquota = $$('myform').getValues().maxquota;
+    	webix.ajax("new_container/" + tree_id + "?name=" + name + "&description=" + description, function(text, data) {
+    		if (data.json().result == false) {
+                webix.alert(data.json().message);
+            } else {
+            	change_container_properties(data.json().uuid, name, description, maxquota);
+                load_tree();
+                container_properties(data.json().uuid);
+                $$("container_tree").select(data.json().uuid);
+                $$('new_container').hide();
+            }
+
+        });
+    }
+
+    function change_container_properties(id, name, description, maxquota) {
+    	webix.ajax("change_container_properties/" + id + "?name=" + name + "&description=" + description + "&maxquota=" + maxquota, function(text, data) {
+
+        });
+    }
+
+    
+    //окно загрузилось, можно запросить дерево
+    webix.attachEvent("onReady", function(){
+        $$("container_tree").clearAll();
+        webix.ajax("get_tree/", function(text, data) {
+            $$("container_tree").parse(data.json());
+           $$("container_tree").openAll();
+            $$("container_tree").refresh();
+
+        });
+    });
+  
+</script>
+    </body>
+</html>

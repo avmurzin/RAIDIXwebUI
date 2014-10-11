@@ -7,6 +7,8 @@ class UrlMappings {
             }
         }
 
+		"/" (controller: "containerManipulation", action: "index")
+		
 		//получить дерево контейнеров
 		"/get_tree" (controller: "containerManipulation", action: "get_tree")
 		
@@ -50,7 +52,7 @@ class UrlMappings {
 		
 		"/experimental" (controller: "containerManipulation", action: "experimental")
 		
-        "/"(view:"/index")
+        //"/"(view:"/index")
         "500"(view:'/error')
 	}
 }
