@@ -5,6 +5,7 @@ import com.avmurzin.avrora.db.Container
 class User {
     String username
     String passwordHash
+	long maxQuota
     
     static hasMany = [ roles: Role, permissions: String, containers: Container ]
 	static belongsTo = Container

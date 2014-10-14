@@ -10,6 +10,7 @@ import java.util.regex.Pattern
 import com.avmurzin.avrora.db.Container
 import com.avmurzin.avrora.global.UserRole
 import com.avmurzin.avrora.sec.User
+import com.avmurzin.avrora.system.XfsQuotaSet
 
 /**
  * Управление файлами конфигурации Samba. 
@@ -19,6 +20,7 @@ import com.avmurzin.avrora.sec.User
 class SmbShareControl implements ShareControl {
 	//TODO: заменить ссылку на файл конфигурации на глобальную переменную
 	ReturnMessage returnMessage = new ReturnMessage()
+	QuotaSet quotaSet;
 
 	/**
 	 * Добавление ресурса (открытие ранее созданного).
@@ -36,25 +38,37 @@ class SmbShareControl implements ShareControl {
 	@Override
 	public ReturnMessage addShare(String uuid, String name, String description) {
 		def config = new ConfigSlurper().parse(new File('ConfigSlurper/avrora.groovy').toURI().toURL())
-		
+
+		//определить тип используемой FS (по настройкам)
+
+		switch (config.quota.fstype) {
+			case "zfs":
+				quotaSet = ZfsQuotaSet.getInstance()
+				break;
+			case "xfs":
+				quotaSet = XfsQuotaSet.getInstance()
+				break;
+
+		}
+
 		//если конфиг для шары есть, то он сначала будет удален
 		closeShare(uuid)
-		
+
 		def container = Container.findByUuid(UUID.fromString(uuid))
-		
+
 		// выйти, если контейнер виртуальный или не найден
 		if (container.type.equals(ContainerType.VIRTUAL)  || container == null) {
 			returnMessage.setResult(false)
 			returnMessage.setMessage("Контейнер не поддерживает операцию или не существует")
 			return returnMessage
 		}
-		
+
 		//имя самой шары
 		def sharename = "${name}"
 		//имя каталога, который будет расшарен
 		//def sharepath = "${config.smb.sharefolder}/${name}-${uuid.getAt(1..4)}"
 		def sharepath = "${config.smb.sharefolder}/${name}"
-		
+
 		//если текущее имя расшаренного каталога не соответствует прошлому
 		if (!container.sharepath.equals(sharepath) && !container.sharepath.equals("")) {
 			def folder = new File(container.sharepath)
@@ -64,7 +78,7 @@ class SmbShareControl implements ShareControl {
 			container.sharepath = sharepath
 			container.save(flush: true)
 		}
-		
+
 		//создание папки для расшаривания
 		def folder = new File(sharepath)
 		if( !folder.exists() ) {
@@ -76,29 +90,29 @@ class SmbShareControl implements ShareControl {
 				"comment = text\n" +
 				"path = ${sharepath}\n" +
 				"browseable = yes\n"
-				
-				
-				def users = container.users.findAll()
-				def rolist = "read list = "
-				def rwlist = "write list = "
 
-				for (User user : users) {
-					for(UserRole role : UserRole.values()) {
-	
-						def perm = user.permissions.find {it == "${uuid}:${role.toString()}"}
-						//println perm
-						if (perm != null) {
-							//out.put("${user.username}", "${role}")
-							if (role == UserRole.ROUSER) {
-								rolist += " ${user.username},"
-							}
-							if (role == UserRole.RWUSER) {
-								rwlist += " ${user.username},"
-							}
-						}
-						perm = null;
+
+		def users = container.users.findAll()
+		def rolist = "read list = "
+		def rwlist = "write list = "
+
+		for (User user : users) {
+			for(UserRole role : UserRole.values()) {
+
+				def perm = user.permissions.find {it == "${uuid}:${role.toString()}"}
+				//println perm
+				if (perm != null) {
+					//out.put("${user.username}", "${role}")
+					if (role == UserRole.ROUSER) {
+						rolist += " ${user.username},"
+					}
+					if (role == UserRole.RWUSER) {
+						rwlist += " ${user.username},"
 					}
 				}
+				perm = null;
+			}
+		}
 
 		confText += "${rolist} fake\n"
 		confText += "${rwlist} fake\n"
@@ -118,6 +132,9 @@ class SmbShareControl implements ShareControl {
 
 		//перезапуск smbd
 		executeCommand("sudo ${config.smb.restartscript}")
+
+		XfsQuotaSet xfsQuotaSet = XfsQuotaSet.getInstance()
+		xfsQuotaSet.setFolderQuota(container.uuid)
 
 		return returnMessage
 	}
@@ -169,10 +186,10 @@ class SmbShareControl implements ShareControl {
 		} else {
 			returnMessage.setMessage("Каталог не существует")
 			returnMessage.setResult(false)
-		}	
-		
-		
-		
+		}
+
+
+
 		return returnMessage;
 	}
 
@@ -181,7 +198,7 @@ class SmbShareControl implements ShareControl {
 	public ReturnMessage closeShare(String uuid) {
 		def config = new ConfigSlurper().parse(new File('ConfigSlurper/avrora.groovy').toURI().toURL())
 		try {
-			
+
 			//удаление ссылки в рутовом файле
 			def rootconf = new File( "${config.smb.rootconf}" )
 			processFileInplace(rootconf) { text ->

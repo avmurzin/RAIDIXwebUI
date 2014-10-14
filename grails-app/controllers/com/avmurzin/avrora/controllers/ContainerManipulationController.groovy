@@ -59,12 +59,18 @@ class ContainerManipulationController {
 			UiContainerTree tree1 = UiContainerTree.getInstance();
 
 			Container container = tree1.getNewContainer(parentuuid, name, description, SecurityUtils.subject.getPrincipal().toString())
-
+			if (container == null) {
+				render(contentType: "application/json") {
+					result = false
+					message = "Невозможно создать контейнер в данном месте"
+				}
+			} else {
 			render(contentType: "application/json") {
 				result = true
 				uuid = container.uuid.toString()
 				value = container.name
 				image = container.type.toString()
+			}
 			}
 		} else {
 			render(contentType: "application/json") {
@@ -126,7 +132,7 @@ class ContainerManipulationController {
 
 	/**
 	 * Изменить свойства контейнера uuid.
-	 * ?username=&description=&maxquota=
+	 * ?name=&description=&maxquota=
 	 * +Доступ: ${uuid}:OWNER
 	 * @return
 	 */

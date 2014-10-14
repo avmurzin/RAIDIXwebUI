@@ -7,6 +7,7 @@ import com.avmurzin.avrora.aux.ContainerType
 import com.avmurzin.avrora.sec.User
 import com.avmurzin.avrora.system.ShareControl
 import com.avmurzin.avrora.system.SmbShareControl
+import com.avmurzin.avrora.system.XfsQuotaSet
 
 /**
  * Генерация JSON-данных для элемента UI - дерево контейнеров на основе ссылки
@@ -72,6 +73,12 @@ class UiContainerTree {
 	 * @return новый контейнер.
 	 */
 	public Container getNewContainer(String parentuuid, String name, String description, String username) {
+
+		def parent = Container.findByUuid(UUID.fromString(parentuuid))
+		if (parent.type != ContainerType.VIRTUAL) {
+			return null
+		}
+
 		def container = new Container(uuid: UUID.randomUUID(),
 		parentUuid: UUID.fromString(parentuuid),
 		name: name,
@@ -82,6 +89,7 @@ class UiContainerTree {
 		sharepath: 'xxx').save(failOnError: true, flush: true);
 
 		def user = User.findByUsername(username)
+
 		if ((container != null) && (user != null)) {
 			container.addToUsers(user)
 			container.save(flush: true)
@@ -214,7 +222,7 @@ class UiContainerTree {
 					}
 				}
 				//перед удалением освободить квоту
-				changeContainer(uuid,"","",0)
+				changeContainer(uuid,container.name,container.description,0)
 				container.delete(flush: true)
 				refreshTree()
 				return true
@@ -233,7 +241,7 @@ class UiContainerTree {
 
 				if (shareControl.delShare(uuid.toString()).result) {
 					//перед удалением освободить квоту
-					changeContainer(uuid,"","",0)
+					changeContainer(uuid,container.name,container.description,0)
 					container.delete(flush: true)
 					refreshTree()
 					return true
@@ -325,14 +333,18 @@ class UiContainerTree {
 	 */
 	public boolean refreshShareConfig(Container container) {
 		ShareControl shareControl;
+		//XfsQuotaSet xfsQuotaSet;
 
 		switch (container.type) {
 			case ContainerType.SHARE_SMB:
 				shareControl = new SmbShareControl()
+			//xfsQuotaSet = XfsQuotaSet.getInstance()
 				break;
 			default: return false
 				break;
 		}
+
+		//xfsQuotaSet.setFolderQuota(container.uuid)
 		return shareControl.addShare(container.uuid.toString(), container.name, container.description).result
 	}
 
