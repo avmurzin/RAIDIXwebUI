@@ -10,7 +10,10 @@ import java.util.regex.Pattern
 import com.avmurzin.avrora.db.Container
 import com.avmurzin.avrora.global.UserRole
 import com.avmurzin.avrora.sec.User
+import com.avmurzin.avrora.system.QuotaSet
 import com.avmurzin.avrora.system.XfsQuotaSet
+import com.avmurzin.avrora.system.ZfsQuotaSet
+import com.avmurzin.avrora.ui.UiContainerTree
 
 /**
  * Управление файлами конфигурации Samba. 
@@ -43,12 +46,13 @@ class SmbShareControl implements ShareControl {
 
 		switch (config.quota.fstype) {
 			case "zfs":
+			println "zfs"
 				quotaSet = ZfsQuotaSet.getInstance()
 				break;
 			case "xfs":
+			println "xfs"
 				quotaSet = XfsQuotaSet.getInstance()
 				break;
-
 		}
 
 		//если конфиг для шары есть, то он сначала будет удален
@@ -71,19 +75,17 @@ class SmbShareControl implements ShareControl {
 
 		//если текущее имя расшаренного каталога не соответствует прошлому
 		if (!container.sharepath.equals(sharepath) && !container.sharepath.equals("")) {
-			def folder = new File(container.sharepath)
-			if( folder.exists() ) {
-				folder.renameTo(new File(sharepath))
-			}
+			quotaSet.renameDir(container.sharepath, sharepath)
 			container.sharepath = sharepath
 			container.save(flush: true)
 		}
 
 		//создание папки для расшаривания
-		def folder = new File(sharepath)
-		if( !folder.exists() ) {
-			folder.mkdirs()
-		}
+//		def folder = new File(sharepath)
+//		if( !folder.exists() ) {
+//			folder.mkdirs()
+//		}
+		quotaSet.makeDir(sharepath)
 
 		//подготовка конфига для шары
 		def confText = "[${sharename}]\n" +
@@ -133,8 +135,8 @@ class SmbShareControl implements ShareControl {
 		//перезапуск smbd
 		executeCommand("sudo ${config.smb.restartscript}")
 
-		XfsQuotaSet xfsQuotaSet = XfsQuotaSet.getInstance()
-		xfsQuotaSet.setFolderQuota(container.uuid)
+		//XfsQuotaSet xfsQuotaSet = XfsQuotaSet.getInstance()
+		quotaSet.setFolderQuota(container.uuid)
 
 		return returnMessage
 	}
@@ -168,15 +170,30 @@ class SmbShareControl implements ShareControl {
 
 	@Override
 	public ReturnMessage delShare(String uuid) {
-		// TODO Auto-generated method stub
+		def config = new ConfigSlurper().parse(new File('ConfigSlurper/avrora.groovy').toURI().toURL())
+		switch (config.quota.fstype) {
+			case "zfs":
+				quotaSet = ZfsQuotaSet.getInstance()
+				//println "zfs"
+				break;
+			case "xfs":
+				quotaSet = XfsQuotaSet.getInstance()
+				//println "xfs"
+				break;
+		}
+		
 		def container = Container.findByUuid(UUID.fromString(uuid))
 		if (container != null) {
 			def currentDir = new File(container.sharepath)
 			def files = []
 			currentDir.eachFileMatch(~/^.*$/) { files << it.name }
 			if (files.empty) {
+				
+				//перед удалением освободить квоту
+				UiContainerTree.getInstance().changeContainer(UUID.fromString(uuid),container.name,container.description,0)
 				closeShare(uuid)
-				currentDir.deleteDir()
+				//currentDir.deleteDir()
+				quotaSet.deleteDir(container.sharepath)
 				returnMessage.setMessage("Каталог успешно удален")
 				returnMessage.setResult(true)
 			} else {
@@ -189,7 +206,8 @@ class SmbShareControl implements ShareControl {
 		}
 
 
-
+		//перезапуск smbd
+		executeCommand("sudo ${config.smb.restartscript}")
 		return returnMessage;
 	}
 
@@ -215,6 +233,9 @@ class SmbShareControl implements ShareControl {
 			returnMessage.setMessage(e.message)
 			returnMessage.setResult(false)
 		}
+		
+		//перезапуск smbd
+		executeCommand("sudo ${config.smb.restartscript}")
 		return returnMessage
 	}
 

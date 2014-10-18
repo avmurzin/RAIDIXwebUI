@@ -3,8 +3,8 @@ package com.avmurzin.avrora.system
 import java.util.UUID;
 
 import com.avmurzin.avrora.global.ReturnMessage
-import com.avmurzin.avrora.ui.UiContainerTree;
 import com.avmurzin.avrora.db.Container
+import com.avmurzin.avrora.sec.User
 import com.avmurzin.avrora.aux.ContainerType
 
 /**
@@ -14,11 +14,11 @@ import com.avmurzin.avrora.aux.ContainerType
  */
 class XfsQuotaSet implements QuotaSet {
 	public static final XfsQuotaSet INSTANCE = new XfsQuotaSet();
-	
+
 	public static XfsQuotaSet getInstance() {
 		return INSTANCE;
 	}
-	
+
 	ReturnMessage returnMessage = new ReturnMessage()
 
 	/**
@@ -53,31 +53,89 @@ class XfsQuotaSet implements QuotaSet {
 		//# xfs_quota -x -c 'limit -p bhard=1g 42' /var
 		// 42 - числовой идентификатор для примера
 	}
-	
+
 	@Override
 	public long getFolderQuota(UUID uuid) {
 		// TODO Auto-generated method stub
 		return 0;
 	}
+	
 	@Override
-	public ReturnMessage setUserQuota(UUID uuid) {
-		// TODO Auto-generated method stub
-		return null;
+	public ReturnMessage setUserQuota(String username, long maxquota) {
+		def config = new ConfigSlurper().parse(new File('ConfigSlurper/avrora.groovy').toURI().toURL())
+		def user = User.findByUsername(username)
+		if (user == null) {
+			returnMessage.setMessage("Пользователь не сущесвтует")
+			returnMessage.setResult(false)
+
+		} else {
+			user.maxQuota = maxquota
+			user.save(flush: true)
+			ExecuteCommand.execute("sudo ${config.quota.setuserscript} ${user.username} ${user.maxQuota / 1024} ${config.quota.xfs.mount}")
+			returnMessage.setMessage("")
+			returnMessage.setResult(true)
+		}
+		return returnMessage;
 	}
+	
 	@Override
-	public long getUserQuota(UUID uuid) {
+	public long getUserQuota(String username) {
 		// TODO Auto-generated method stub
 		return 0;
 	}
+
+	/**
+	 * 
+	 */
 	@Override
 	public ReturnMessage makeDir(String sharepath) {
-		// TODO Auto-generated method stub
-		return null;
+		try {
+			def folder = new File(sharepath)
+			if( !folder.exists() ) {
+				folder.mkdirs()
+			}
+			returnMessage.setResult(true)
+			returnMessage.setMessage("")
+		} catch (Exception e) {
+			returnMessage.setResult(false)
+			returnMessage.setMessage(e.toString())
+		}
+
+		return returnMessage;
 	}
+
 	@Override
 	public ReturnMessage deleteDir(String sharepath) {
-		// TODO Auto-generated method stub
-		return null;
+		try {
+			def currentDir = new File(sharepath)
+			currentDir.deleteDir()
+			returnMessage.setResult(true)
+			returnMessage.setMessage("")
+		} catch (Exception e) {
+			returnMessage.setResult(false)
+			returnMessage.setMessage(e.toString())
+		}
+		return returnMessage;
+	}
+
+	/**
+	 * 
+	 */
+	@Override
+	public ReturnMessage renameDir(String oldsharepath, String newsharepath) {
+		try {
+			def folder = new File(oldsharepath)
+			if( folder.exists() ) {
+				folder.renameTo(new File(newsharepath))
+			}
+			returnMessage.setResult(true)
+			returnMessage.setMessage("")
+		} catch (Exception e) {
+			//e.printStackTrace()
+			returnMessage.setResult(false)
+			returnMessage.setMessage(e.toString())
+		}
+		return returnMessage;
 	}
 
 

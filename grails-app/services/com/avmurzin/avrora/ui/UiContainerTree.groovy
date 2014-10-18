@@ -165,7 +165,9 @@ class UiContainerTree {
 	public boolean closeShare(UUID uuid) {
 		ShareControl shareControl;
 		def container = Container.findByUuid(uuid)
-
+		if(container == null) {
+			return false
+		}
 		switch (container.type) {
 			case ContainerType.SHARE_SMB:
 				shareControl = new SmbShareControl()
@@ -240,8 +242,7 @@ class UiContainerTree {
 				}
 
 				if (shareControl.delShare(uuid.toString()).result) {
-					//перед удалением освободить квоту
-					changeContainer(uuid,container.name,container.description,0)
+					
 					container.delete(flush: true)
 					refreshTree()
 					return true

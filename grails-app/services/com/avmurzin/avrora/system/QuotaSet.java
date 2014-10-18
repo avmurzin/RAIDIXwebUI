@@ -22,6 +22,7 @@ public interface QuotaSet {
 	 * @return
 	 */
 	public ReturnMessage deleteDir(String sharepath);
+	public ReturnMessage renameDir(String oldsharepath,String newsharepath);
 	/**
 	 * Установка квоты для каталога.
 	 * @param uuid
@@ -29,6 +30,6 @@ public interface QuotaSet {
 	 */
 	public ReturnMessage setFolderQuota(UUID uuid);
 	public long getFolderQuota(UUID uuid);
-	public ReturnMessage setUserQuota(UUID uuid);
-	public long getUserQuota(UUID uuid);
+	public ReturnMessage setUserQuota(String username, long maxquota);
+	public long getUserQuota(String username);
 }

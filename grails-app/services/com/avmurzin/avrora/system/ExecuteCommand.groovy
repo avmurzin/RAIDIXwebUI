@@ -5,7 +5,7 @@ import com.avmurzin.avrora.global.ReturnMessage
 class ExecuteCommand {
 	static public ReturnMessage execute(String command) {
 		ReturnMessage returnMessage = new ReturnMessage()
-		
+		println command
 				StringBuffer output = new StringBuffer();
 		
 				Process p;
@@ -27,7 +27,7 @@ class ExecuteCommand {
 					returnMessage.setMessage(e.message)
 					returnMessage.setResult(false)
 				}
-		
+		println returnMessage.getMessage()
 				return returnMessage
 		
 			}

@@ -25,7 +25,8 @@ class BootStrap {
 				description: "Корневой контейнер",
 				freequota: 0,
 				maxquota: 0,
-				type: ContainerType.VIRTUAL);
+				type: ContainerType.VIRTUAL,
+				sharepath: "xxx");
 
 			folderRoot.save();
 		}
