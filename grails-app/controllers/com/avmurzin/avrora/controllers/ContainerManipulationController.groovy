@@ -53,6 +53,14 @@ class ContainerManipulationController {
 		String parentuuid = params.parentuuid;
 		String name = params.name;
 		String description = params.description;
+		
+		if (description.equals('')) {
+			description = "без описания"
+		}
+		
+		if (name.equals('')) {
+			name = "без_имени"
+		}
 
 		if (SecurityUtils.subject.isPermitted("${parentuuid}:${UserRole.OWNER.toString()}") ||
 		SecurityUtils.subject.isPermitted("${parentuuid}:${UserRole.ADMIN.toString()}")) {
@@ -65,12 +73,12 @@ class ContainerManipulationController {
 					message = "Невозможно создать контейнер в данном месте"
 				}
 			} else {
-			render(contentType: "application/json") {
-				result = true
-				uuid = container.uuid.toString()
-				value = container.name
-				image = container.type.toString()
-			}
+				render(contentType: "application/json") {
+					result = true
+					uuid = container.uuid.toString()
+					value = container.name
+					image = container.type.toString()
+				}
 			}
 		} else {
 			render(contentType: "application/json") {
@@ -142,6 +150,14 @@ class ContainerManipulationController {
 		String cdescription = params.description;
 		long cmaxquota = Long.valueOf(params.maxquota).longValue();
 
+		if (cdescription.equals('')) {
+			cdescription = "без описания"
+		}
+		
+		if (cname.equals('')) {
+			cname = "без_имени"
+		}
+		
 		if (SecurityUtils.subject.isPermitted("${cuuid}:${UserRole.OWNER.toString()}")) {
 			UiContainerTree tree1 = UiContainerTree.getInstance();
 			Container container = tree1.changeContainer(UUID.fromString(cuuid),
@@ -189,6 +205,7 @@ class ContainerManipulationController {
 				tree1.refreshShareConfig(container)
 				render(contentType: "application/json") {
 					result = true
+					uuid = container.uuid.toString()
 					//message = "Недостаточно прав"
 				}
 
@@ -217,7 +234,7 @@ class ContainerManipulationController {
 		String uuid = params.uuid;
 		String username = params.username;
 		UiContainerTree tree1 = UiContainerTree.getInstance();
-//TODO: если удалить себя и списка пользователей, то оппа...
+		//TODO: если удалить себя и списка пользователей, то оппа...
 		if (SecurityUtils.subject.isPermitted("${uuid}:${UserRole.OWNER.toString()}")) {
 			def container = Container.findByUuid(UUID.fromString(uuid))
 			def user = User.findByUsername(username)
@@ -269,8 +286,17 @@ class ContainerManipulationController {
 				}
 			}
 		}
+		def keyset = out.keySet()
 		render (contentType: "application/json") {
-			out
+			//keyset
+			
+
+			userses = array {
+			for (k in keyset) {
+				userse username: k, role: out.get(k)
+			}
+			}
+			//out
 		}
 	}
 	/**
@@ -286,6 +312,14 @@ class ContainerManipulationController {
 		String cname = params.name;
 		String description = params.description;
 		ContainerType ctype = params.sharetype;
+		
+		if (description.equals('')) {
+			description = "без описания"
+		}
+		
+		if (cname.equals('')) {
+			cname = "без_имени"
+		}
 
 		if (SecurityUtils.subject.isPermitted("${parentuuid}:${UserRole.OWNER.toString()}") ||
 		SecurityUtils.subject.isPermitted("${parentuuid}:${UserRole.ADMIN.toString()}") ||
@@ -299,10 +333,12 @@ class ContainerManipulationController {
 
 			if (container != null) {
 				render(contentType: "application/json") {
-					result = true
 					uuid = container.uuid.toString()
-					value = container.name
-					image = container.type.toString()
+					name = container.name
+					type = container.type.toString()
+					description = container.description
+					maxquota = container.maxQuota
+					freequota = container.freeQuota
 				}
 			} else {
 				render(contentType: "application/json") {
@@ -319,7 +355,7 @@ class ContainerManipulationController {
 			}
 		}
 	}
-	
+
 
 	/**
 	 * Временное закрытие шары uuid (удаляется конфиг, но не удаляются данные)
@@ -355,7 +391,7 @@ class ContainerManipulationController {
 			}
 		}
 	}
-	
+
 	/**
 	 * Открыть ранее созданную шару.
 	 * Тип шары определяется по типу контейнера (SHARE_*).
@@ -371,15 +407,15 @@ class ContainerManipulationController {
 		{
 			UiContainerTree tree1 = UiContainerTree.getInstance();
 
-//			Container container = tree1.getNewShare(parentuuid, cname,
-//					description, SecurityUtils.subject.getPrincipal().toString(),
-//					ctype)
-			
-			
+			//			Container container = tree1.getNewShare(parentuuid, cname,
+			//					description, SecurityUtils.subject.getPrincipal().toString(),
+			//					ctype)
+
+
 			def container = Container.findByUuid(UUID.fromString(cuuid))
-			
+
 			def res = tree1.openShare(UUID.fromString(cuuid))
-			
+
 			if ((container != null) && res) {
 				render(contentType: "application/json") {
 					result = true
