@@ -71,11 +71,12 @@ class SmbShareControl implements ShareControl {
 		def sharename = "${name}"
 		//имя каталога, который будет расшарен
 		//def sharepath = "${config.smb.sharefolder}/${name}-${uuid.getAt(1..4)}"
-		def sharepath = "${config.smb.sharefolder}/${name}"
+		//def sharepath = "${config.smb.sharefolder}/${name}"
+		def sharepath = "${config.smb.sharefolder}/${uuid}"
 
 		//если текущее имя расшаренного каталога не соответствует прошлому
 		if (!container.sharepath.equals(sharepath) && !container.sharepath.equals("")) {
-			quotaSet.renameDir(container.sharepath, sharepath)
+			//quotaSet.renameDir(container.sharepath, sharepath, container.uuid.toString())
 			container.sharepath = sharepath
 			container.save(flush: true)
 		}
@@ -85,7 +86,7 @@ class SmbShareControl implements ShareControl {
 //		if( !folder.exists() ) {
 //			folder.mkdirs()
 //		}
-		quotaSet.makeDir(sharepath)
+		quotaSet.makeDir(sharepath, container.uuid.toString())
 
 		//подготовка конфига для шары
 		def confText = "[${sharename}]\n" +
@@ -193,7 +194,7 @@ class SmbShareControl implements ShareControl {
 				UiContainerTree.getInstance().changeContainer(UUID.fromString(uuid),container.name,container.description,0)
 				closeShare(uuid)
 				//currentDir.deleteDir()
-				quotaSet.deleteDir(container.sharepath)
+				quotaSet.deleteDir(container.sharepath, container.uuid.toString())
 				returnMessage.setMessage("Каталог успешно удален")
 				returnMessage.setResult(true)
 			} else {

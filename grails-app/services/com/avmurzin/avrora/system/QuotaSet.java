@@ -15,14 +15,14 @@ public interface QuotaSet {
 	 * @param sharepath
 	 * @return
 	 */
-	public ReturnMessage makeDir(String sharepath);
+	public ReturnMessage makeDir(String sharepath, String uuid);
 	/**
 	 * Удаление каталога.
 	 * @param sharepath
 	 * @return
 	 */
-	public ReturnMessage deleteDir(String sharepath);
-	public ReturnMessage renameDir(String oldsharepath,String newsharepath);
+	public ReturnMessage deleteDir(String sharepath, String uuid);
+	public ReturnMessage renameDir(String oldsharepath,String newsharepath, String uuid);
 	/**
 	 * Установка квоты для каталога.
 	 * @param uuid

@@ -88,7 +88,7 @@ class XfsQuotaSet implements QuotaSet {
 	 * 
 	 */
 	@Override
-	public ReturnMessage makeDir(String sharepath) {
+	public ReturnMessage makeDir(String sharepath, String uuid) {
 		try {
 			def folder = new File(sharepath)
 			if( !folder.exists() ) {
@@ -105,7 +105,7 @@ class XfsQuotaSet implements QuotaSet {
 	}
 
 	@Override
-	public ReturnMessage deleteDir(String sharepath) {
+	public ReturnMessage deleteDir(String sharepath, String uuid) {
 		try {
 			def currentDir = new File(sharepath)
 			currentDir.deleteDir()
@@ -122,7 +122,7 @@ class XfsQuotaSet implements QuotaSet {
 	 * 
 	 */
 	@Override
-	public ReturnMessage renameDir(String oldsharepath, String newsharepath) {
+	public ReturnMessage renameDir(String oldsharepath, String newsharepath, String uuid) {
 		try {
 			def folder = new File(oldsharepath)
 			if( folder.exists() ) {

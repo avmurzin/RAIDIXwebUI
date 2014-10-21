@@ -17,7 +17,17 @@ class ZfsQuotaSet implements QuotaSet {
 	private ZfsQuotaSet() {}
 
 	ReturnMessage returnMessage = new ReturnMessage()
-
+	
+	/**
+	 * Установить квоту на шару (== набор данных ZFS).
+	 * вызывается скрипт config.quota.zfs.setscript
+	 * с параметром zfsPool uuid quota
+	 * имя пула ZFS, id расшариваемого каталога, квота Кб
+	 * 
+	 * #!/bin/bash
+	 * #$1 - pool, $2 - uuid, $3 - quota
+	 * zfs set quota=${3}K $1/$2
+	 */
 	@Override
 	public ReturnMessage setFolderQuota(UUID uuid) {
 		def config = new ConfigSlurper().parse(new File('ConfigSlurper/avrora.groovy').toURI().toURL())
@@ -33,7 +43,7 @@ class ZfsQuotaSet implements QuotaSet {
 		def sharepath = "${container.sharepath}"
 		def hardLimit = container.maxQuota / 1024 //на входе метода байты, системный скрипт предполагает килобайты
 
-		return ExecuteCommand.execute("sudo ${config.quota.setscript} ${sharepath} ${hardLimit}")
+		return ExecuteCommand.execute("sudo ${config.quota.setscript} ${config.quota.zfs.pool} ${uuid} ${hardLimit}")
 	}
 
 	@Override
@@ -68,13 +78,21 @@ class ZfsQuotaSet implements QuotaSet {
 
 	/**
 	 * Создать каталог и набор данных для ZFS
+	 * вызывается скрипт config.quota.zfs.makedir
+	 * с параметрами zfsPool sharepath uuid 
+	 * имя пула ZFS, путь к каталогу для конфига smb, id расшариваемого каталога
+	 * 
+	 * #!/bin/bash
+	 * #$1 - pool, $2 - sharepath, $3 - uuid
+	 * mkdir $2
+	 * zfs create -o mountpoint=$2 $1/$3
 	 */
 	@Override
-	public ReturnMessage makeDir(String sharepath) {
+	public ReturnMessage makeDir(String sharepath, String uuid) {
 		def config = new ConfigSlurper().parse(new File('ConfigSlurper/avrora.groovy').toURI().toURL())
 		try {
 			//ExecuteCommand.execute("zfs create ${config.quota.zfs.pool}${sharepath}")
-			ExecuteCommand.execute("sudo ${config.quota.zfs.makedir} ${config.quota.zfs.pool}${sharepath}")
+			ExecuteCommand.execute("sudo ${config.quota.zfs.makedir} ${config.quota.zfs.pool} ${sharepath} ${uuid}")
 			returnMessage.setResult(true)
 			returnMessage.setMessage("")
 		} catch (Exception e) {
@@ -85,12 +103,24 @@ class ZfsQuotaSet implements QuotaSet {
 		return returnMessage;
 	}
 
+	/**
+	 * Удалить каталог и набор данных для ZFS
+	 * вызывается скрипт config.quota.zfs.deletedir
+	 * с параметрами zfsPool sharepath uuid
+	 * имя пула ZFS, путь к каталогу для конфига smb, id расшариваемого каталога
+	 * 
+	 * #!/bin/bash
+	 * #$1 - pool, $2 - sharepath, $3 - uuid
+	 * #mkdir $2
+	 * zfs destroy $1/$3
+	 * rmdir $2
+	 */
 	@Override
-	public ReturnMessage deleteDir(String sharepath) {
+	public ReturnMessage deleteDir(String sharepath, String uuid) {
 		def config = new ConfigSlurper().parse(new File('ConfigSlurper/avrora.groovy').toURI().toURL())
 		try {
 			//ExecuteCommand.execute("zfs destroy ${config.quota.zfs.pool}${sharepath}")
-			ExecuteCommand.execute("sudo ${config.quota.zfs.deletedir} ${config.quota.zfs.pool}${sharepath}")
+			ExecuteCommand.execute("sudo ${config.quota.zfs.deletedir} ${config.quota.zfs.pool} ${sharepath} ${uuid}")
 			returnMessage.setResult(true)
 			returnMessage.setMessage("")
 		} catch (Exception e) {
@@ -101,9 +131,17 @@ class ZfsQuotaSet implements QuotaSet {
 		return returnMessage;
 	}
 
+	/**
+	 * Переименование шары для ZFS в текущей версии заблокировано.
+	 * 
+	 */
 	@Override
-	public ReturnMessage renameDir(String oldsharepath, String newsharepath) {
+	public ReturnMessage renameDir(String oldsharepath, String newsharepath, String uuid) {
 		def config = new ConfigSlurper().parse(new File('ConfigSlurper/avrora.groovy').toURI().toURL())
+		
+//		returnMessage.setResult(false)
+//		returnMessage.setMessage("В текущей версии переименование сетевого ресурса заблокировано")
+		
 		try {
 			//ExecuteCommand.execute("zfs rename ${config.quota.zfs.pool}${oldsharepath} ${config.quota.zfs.pool}${newsharepath}")
 			ExecuteCommand.execute("sudo ${config.quota.zfs.renamedir} ${config.quota.zfs.pool}${oldsharepath} ${config.quota.zfs.pool}${newsharepath}")
