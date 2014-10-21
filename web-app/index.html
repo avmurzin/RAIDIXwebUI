@@ -23,6 +23,15 @@
             color:white;
             border-radius:3px;
         }
+        .info{
+            width:100px;
+            text-align: center;
+            font-weight:normal;
+            float:right;
+            background-color:#F99;
+            color:white;
+            border-radius:3px;
+        }
     </style>
     
     <body>
@@ -69,8 +78,12 @@
     var toolbar = {
             view:"toolbar", paddingY:0,  elements:[
                 {}, 
-                { },
-                { view:"button", label:"Выйти", width:100 }
+                { view:"label", id:"logged_user", value: "", align: "right"},
+                { view:"button", label:"Выйти", width:100, on:{
+                    onItemClick:function(){
+                        logout();
+                    }
+                    } }
             ]
         };
     
@@ -110,11 +123,18 @@
     var users_list = {
     		view: "list",
     		id: "users",
-    		template: "<div class='mark'>#role# </div> <strong>#username#</strong>",
+    		template: "<strong>#username#</strong> <span class='info'>Удалить</span> <div class='mark'>#role# </div> ",
     		type:{
                 height:62
             },
             select:true,
+            onClick:{
+                info:function(e, id){
+                    //webix.message(this.getItem(id).username + "/" + this.getItem(id).role);
+                    del_user(this.getItem(id).username, this.getItem(id).role);
+                    return false;
+                }
+            },
             data:[]
     }
     
@@ -291,7 +311,7 @@
                if (data.json().result == false) {
                     webix.alert(data.json().message);
                  } else {
-                    change_container_properties(data.json().uuid, name, description, maxquota);
+                    change_container_properties(data.json().uuid, data.json().name, description, maxquota);
                     load_tree();
                     container_properties(data.json().uuid);
                     $$("container_tree").select(data.json().uuid);
@@ -480,6 +500,36 @@
         });
     }
     
+    //удаление роли role пользователя username из контейнера
+    function del_user(username, role) {
+    	var tree_id = $$("container_tree").getSelectedId();
+    	//webix.message("del_container_user_role/" + tree_id + "?username=" + username + "&role=" + role);
+    	webix.confirm({
+          title:"Внимание!",
+          ok:"Удалить", 
+          cancel:"Отказаться",
+          type:"confirm-warning",
+          text:"Вы удаляете право " + role + " для пользователя " + username,
+          callback:function(result){ //setting callback
+        	  if (result) {
+        	        webix.ajax("del_container_user_role/" + tree_id + "?username=" + username + "&role=" + role, function(text, data) {
+        	            if (data.json().result == false) {
+        	               webix.alert(data.json().message);
+        	             } else {
+        	                //load_tree();
+        	                container_properties(tree_id);
+        	                $$("container_tree").select(tree_id);
+        	                //$$('add_user_window').hide();
+        	            }
+
+        	        });       		  
+        	  }
+
+          }
+        });
+    	
+    }
+    
     //окно загрузилось, можно запросить дерево
     webix.attachEvent("onReady", function(){
         $$("container_tree").clearAll();
@@ -489,7 +539,15 @@
             $$("container_tree").refresh();
 
         });
+        webix.ajax("get_username/", function(text, data) {
+            $$("logged_user").setValue(data.json().username);
+        });
     });
+    
+    function logout() {
+    	webix.message("Выход")
+    	window.location.assign("auth/signOut");
+    }
   
 </script>
     </body>

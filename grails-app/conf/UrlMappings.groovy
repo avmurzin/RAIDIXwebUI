@@ -33,6 +33,10 @@ class UrlMappings {
 		// ?username=
 		"/del_container_user/$uuid" (controller: "containerManipulation", action: "del_container_user")
 		
+		//Удалить указанное право пользователя на контейнер uuid 
+		// ?username=&role=OWNER|ADMIN|MANAGER|ROUSER|RWUSER
+		"/del_container_user_role/$uuid" (controller: "containerManipulation", action: "del_container_user_role")
+		
 		//Получить список всех пользователей конейнера uuid с их ролями
 		"/get_container_users/$uuid" (controller: "containerManipulation", action: "get_container_users")
 		
@@ -46,9 +50,14 @@ class UrlMappings {
 		//открыть ранее закрытый ресурс
 		"/open_share/$uuid" (controller: "containerManipulation", action: "open_share")
 		
+		//получить текущее имя пользователя
+		"/get_username" (controller: "containerManipulation", action: "get_username")
+		
 		//изменить квоту для пользователя uuid
 		//?maxquota=
 		"/set_user_quota/$username" (controller: "userManipulation", action: "set_user_quota")
+		
+		
 		
 		//Добавить права (в формате Apache Shiro) пользователю ?username=&permission= 
 		"/add_permission" (controller: "containerManipulation", action: "add_permission")

@@ -8,15 +8,6 @@ class BootStrap {
 
     def init = { servletContext ->
 		if (true) {
-		def user = new User(username: "admin", passwordHash: new Sha256Hash("password").toHex())
-		user.addToPermissions("containerManipulation:*:*")
-		user.save()
-		
-		def user1 = new User(username: "manager", passwordHash: new Sha256Hash("password").toHex())
-		user1.addToPermissions("containerManipulation:share:*")
-		user1.save()
-		
-		
 		
 		if (Container.count() == 0) {
 			def folderRoot = new Container(uuid: UUID.randomUUID(), 
@@ -32,10 +23,24 @@ class BootStrap {
 		}
 		
 		def container = Container.findByParentUuid(GlobalProperties.ROOT_UUID)
+		
+		def user = new User(username: "admin", passwordHash: new Sha256Hash("password").toHex())
+		user.addToPermissions("containerManipulation:*:*")
+		user.addToPermissions("${container.uuid.toString()}:OWNER")
+		user.save()
+		
+		def user1 = new User(username: "manager", passwordHash: new Sha256Hash("password").toHex())
+		user1.addToPermissions("containerManipulation:*:*")
+		user1.addToPermissions("${container.uuid.toString()}:MANAGER")
+		user1.save()
+		
+		//def container = Container.findByParentUuid(GlobalProperties.ROOT_UUID)
 		container.addToUsers(User.findByUsername("admin"))
-		container.maxQuota = 100
-		container.freeQuota = 100
+		container.addToUsers(User.findByUsername("manager"))
+		//container.maxQuota = 1073741824
 		container.save()
+		
+		
 		
 		}
     }

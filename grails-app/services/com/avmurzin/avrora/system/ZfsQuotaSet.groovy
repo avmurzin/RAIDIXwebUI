@@ -66,6 +66,9 @@ class ZfsQuotaSet implements QuotaSet {
 		return 0;
 	}
 
+	/**
+	 * Создать каталог и набор данных для ZFS
+	 */
 	@Override
 	public ReturnMessage makeDir(String sharepath) {
 		def config = new ConfigSlurper().parse(new File('ConfigSlurper/avrora.groovy').toURI().toURL())

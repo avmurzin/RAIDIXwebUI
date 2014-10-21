@@ -189,18 +189,18 @@ class ContainerManipulationController {
 	 * @return
 	 */
 	def add_container_user() {
-		String uuid = params.uuid;
+		String cuuid = params.uuid;
 		String username = params.username;
 		UserRole role = params.role;
 		UiContainerTree tree1 = UiContainerTree.getInstance();
 
-		if (SecurityUtils.subject.isPermitted("${uuid}:${UserRole.OWNER.toString()}")) {
-			def container = Container.findByUuid(UUID.fromString(uuid))
+		if (SecurityUtils.subject.isPermitted("${cuuid}:${UserRole.OWNER.toString()}")) {
+			def container = Container.findByUuid(UUID.fromString(cuuid))
 			def user = User.findByUsername(username)
 			if ((container != null) && (user != null)) {
 				container.addToUsers(user)
 				container.save(flush: true)
-				user.addToPermissions("${uuid}:${role.toString()}")
+				user.addToPermissions("${cuuid}:${role.toString()}")
 				user.save(flush: true)
 				tree1.refreshShareConfig(container)
 				render(contentType: "application/json") {
@@ -249,10 +249,15 @@ class ContainerManipulationController {
 					user.save(flush: true)
 				}
 				tree1.refreshShareConfig(container)
-			}
+				render(contentType: "application/json") {
+					result = true
+					//message = "Недостаточно прав"
+				}
+			} else {
 			render(contentType: "application/json") {
-				result = true
-				//message = "Недостаточно прав"
+				result = false
+				message = "Контейнер или пользователь не существуют"
+			}
 			}
 		} else {
 			render(contentType: "application/json") {
@@ -263,9 +268,87 @@ class ContainerManipulationController {
 	}
 
 	/**
+	 * Удалить указанное право пользователя контейнера uuid.
+	 * ?username=&role=OWNER|ADMIN|MANAGER|ROUSER|RWUSER
+	 * Удаляются все права из user_permissions, содержащие uuid
+	 * +Доступ: ${uuid}:OWNER
+	 * @return
+	 */
+	def del_container_user_role() {
+		String uuid = params.uuid;
+		String username = params.username;
+		UserRole role = params.role;
+		UiContainerTree tree1 = UiContainerTree.getInstance();
+		//TODO: если удалить себя и списка пользователей, то оппа...
+		if (SecurityUtils.subject.isPermitted("${uuid}:${UserRole.OWNER.toString()}")) {
+			def container = Container.findByUuid(UUID.fromString(uuid))
+			def user = User.findByUsername(username)
+			if ((container != null) && (user != null)) {
+				//container.removeFromUsers(user)
+				//container.save(flush: true)
+				Collection perms = new ArrayList<String>()
+				perms = user.permissions.findAll {it == "${uuid}:${role.toString()}"}
+				for (String perm : perms) {
+					//println(perm)
+					user.removeFromPermissions(perm)
+					user.save(flush: true)
+				}
+				tree1.refreshShareConfig(container)
+				render(contentType: "application/json") {
+					result = true
+					//message = "Недостаточно прав"
+				}
+			} else {
+			render(contentType: "application/json") {
+				result = false
+				message = "Контейнер или пользователь не существуют"
+			}
+			}
+		} else {
+			render(contentType: "application/json") {
+				result = false
+				message = "Недостаточно прав"
+			}
+		}
+	}
+	
+	/**
 	 * Получить список всех пользователей контейнера uuid и их ролей.
 	 * @return - JSON вида {"user1":"OWNER","user2":"MANAGER"}
 	 */
+//	def get_container_users() {
+//		String uuid = params.uuid;
+//
+//		def container = Container.findByUuid(UUID.fromString(uuid))
+//		def out = [:]
+//		if (container != null) {
+//			def users = container.users.findAll()
+//			//println users
+//			for (User user : users) {
+//				for(UserRole role : UserRole.values()) {
+//
+//					def perm = user.permissions.find {it == "${uuid}:${role.toString()}"}
+//					println perm
+//					if (perm != null) {
+//						out.put("${user.username}", "${role}")
+//					}
+//					perm = null;
+//				}
+//			}
+//		}
+//		def keyset = out.keySet()
+//		render (contentType: "application/json") {
+//			//keyset
+//			
+//
+//			userses = array {
+//			for (k in keyset) {
+//				userse username: k, role: out.get(k)
+//			}
+//			}
+//			//out
+//		}
+//	}
 	def get_container_users() {
 		String uuid = params.uuid;
 
@@ -273,32 +356,24 @@ class ContainerManipulationController {
 		def out = [:]
 		if (container != null) {
 			def users = container.users.findAll()
-			//println users
-			for (User user : users) {
-				for(UserRole role : UserRole.values()) {
+			render (contentType: "application/json") {
+				userses = array {
+					for (User user : users) {
+						for(UserRole role : UserRole.values()) {
 
-					def perm = user.permissions.find {it == "${uuid}:${role.toString()}"}
-					//println perm
-					if (perm != null) {
-						out.put("${user.username}", "${role}")
+							def perm = user.permissions.find {it == "${uuid}:${role.toString()}"}
+							//println perm
+							if (perm != null) {
+								userse username: "${user.username}", role: "${role}"
+							}
+							perm = null;
+						}
 					}
-					perm = null;
 				}
 			}
 		}
-		def keyset = out.keySet()
-		render (contentType: "application/json") {
-			//keyset
-			
-
-			userses = array {
-			for (k in keyset) {
-				userse username: k, role: out.get(k)
-			}
-			}
-			//out
-		}
 	}
+	
 	/**
 	 * Создать сетевой ресурс (контейнер типа SHARE_*) внутри parentuuid
 	 * ?name=&description=&sharetype=SMB|FTP..
@@ -469,6 +544,16 @@ class ContainerManipulationController {
 	}
 
 
+	/**
+	 * Получить текущее имя пользователя.
+	 * @return
+	 */
+	def get_username() {
+		render(contentType: "application/json") {
+			username = SecurityUtils.subject.getPrincipal().toString()
+		}
+		
+	}
 	def experimental() {
 		String uuid = params.uuid;
 		//String name = params.name;

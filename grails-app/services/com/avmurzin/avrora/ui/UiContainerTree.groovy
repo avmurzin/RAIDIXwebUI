@@ -151,7 +151,7 @@ class UiContainerTree {
 				shareControl = new SmbShareControl()
 				break;
 		}
-
+println "addShare(${container.uuid.toString()}, ${container.name},	${container.description}"
 		shareControl.addShare(container.uuid.toString(), container.name,
 				container.description)
 
