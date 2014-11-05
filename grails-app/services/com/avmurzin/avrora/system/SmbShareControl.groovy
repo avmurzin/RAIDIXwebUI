@@ -93,6 +93,7 @@ class SmbShareControl implements ShareControl {
 				"comment = text\n" +
 				"path = ${sharepath}\n" +
 				"browseable = yes\n"
+				
 
 
 		def users = container.users.findAll()
