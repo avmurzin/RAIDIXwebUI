@@ -53,7 +53,8 @@
         { id:"2",value:"Сетевой_ресурс", submenu:[ 
              {id: "2.1", value: "Открыть"},
              {id: "2.2", value: "Закрыть"},
-             {id: "2.3", value: "Удалить"}
+             {id: "2.3", value: "Удалить"},
+             {id: "2.4", value: "Содержимое"}
                                                 ]}             
     ];
     
@@ -207,7 +208,10 @@
             break;   
         case "2.3":
             del_container();
-            break;       
+            break; 
+        case "2.4":
+            get_sharefilelist();
+            break;
         case "3.1":
             add_user();
             break;            
@@ -529,6 +533,66 @@
         });
     	
     }
+    
+    //list для демонстрации списка файлов
+    var filelist_form = {
+            view: "list",
+            id: "filelist",
+            template: "<img src='images/#type#.gif'> #name#",
+            select:true,
+            data:[],
+            on:{
+                onItemClick:function(id){
+                    get_filelist(id);
+                }
+               }
+    }
+    
+    //окно просмотра списка файлов
+    webix.ui({
+        view : "window",
+        position:"center",
+        id : "filelist_window",
+        head : "<i>Содержимое каталога</i>",
+        width: 400,
+        height: 500,
+        body : {
+            rows : [ filelist_form, {
+                view : "button",
+                id: "",
+                label : "Отменить",
+                click : ("$$('filelist_window').hide();")
+            } ]
+        }
+    });
+
+    //список содержимого шары
+    function get_sharefilelist() {
+        var tree_id = $$("container_tree").getSelectedId();
+        webix.ajax("get_sharefilelist/" + tree_id, function(text, data) {
+        	if (data.json().result == false) {
+                webix.alert(data.json().message);
+            } else {
+            	$$("filelist_window").show();
+        	    $$("filelist").clearAll();
+                $$("filelist").parse(data.json().items);
+         }
+
+        });
+   }
+    //список содержимого обычного каталога
+    function get_filelist(id) {
+    	path = $$("filelist").getItem(id).path;
+        webix.ajax("get_filelist?dir=" + path, function(text, data) {
+        	if (data.json().result == false) {
+        		webix.alert(data.json().message);
+        	} else {
+                $$("filelist").clearAll();
+                $$("filelist").parse(data.json().items);
+        	}
+
+        });
+   }
     
     //окно загрузилось, можно запросить дерево
     webix.attachEvent("onReady", function(){

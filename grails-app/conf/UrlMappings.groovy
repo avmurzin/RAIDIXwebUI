@@ -53,6 +53,17 @@ class UrlMappings {
 		//получить текущее имя пользователя
 		"/get_username" (controller: "containerManipulation", action: "get_username")
 		
+		//получить список файлов и каталогов в директории dir
+		// ?dir=
+		"/get_filelist" (controller: "containerManipulation", action: "get_filelist")
+		
+		//получить список файлов и каталогов шары uuid
+		"/get_sharefilelist/$uuid" (controller: "containerManipulation", action: "get_sharefilelist")
+		
+		//получить данные из лога sambalog
+		//?ipAddress=&username=&filePath=
+		"/get_sambalog" (controller: "containerManipulation", action: "get_sambalog")
+		
 		//изменить квоту для пользователя uuid
 		//?maxquota=
 		"/set_user_quota/$username" (controller: "userManipulation", action: "set_user_quota")

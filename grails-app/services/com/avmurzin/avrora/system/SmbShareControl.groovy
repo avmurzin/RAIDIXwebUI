@@ -92,9 +92,13 @@ class SmbShareControl implements ShareControl {
 		def confText = "[${sharename}]\n" +
 				"comment = text\n" +
 				"path = ${sharepath}\n" +
-				"browseable = yes\n"
-				
-
+				"browseable = yes\n" +
+				"vfs objects = full_audit\n" +
+				"full_audit:prefix = @${sharepath}|%u|%I\n" +
+				"full_audit:failure = none\n" +
+				"full_audit:success = mkdir rmdir open read pread write pwrite sendfile rename unlink lock\n" +
+				"full_audit:facility = local5\n" +
+				"full_audit:priority = debug\n"
 
 		def users = container.users.findAll()
 		def rolist = "read list = "
