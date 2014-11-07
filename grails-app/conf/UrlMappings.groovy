@@ -64,6 +64,9 @@ class UrlMappings {
 		//?ipAddress=&username=&filePath=
 		"/get_sambalog" (controller: "containerManipulation", action: "get_sambalog")
 		
+		//получить данные из лога sambalog для шары uuid
+		"/get_sharesambalog/$uuid" (controller: "containerManipulation", action: "get_sharesambalog")
+		
 		//изменить квоту для пользователя uuid
 		//?maxquota=
 		"/set_user_quota/$username" (controller: "userManipulation", action: "set_user_quota")

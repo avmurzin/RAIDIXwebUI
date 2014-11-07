@@ -54,7 +54,8 @@
              {id: "2.1", value: "Открыть"},
              {id: "2.2", value: "Закрыть"},
              {id: "2.3", value: "Удалить"},
-             {id: "2.4", value: "Содержимое"}
+             {id: "2.4", value: "Содержимое"},
+             {id: "2.5", value: "Журнал"}
                                                 ]}             
     ];
     
@@ -211,6 +212,9 @@
             break; 
         case "2.4":
             get_sharefilelist();
+            break;
+        case "2.5":
+            get_sharesambalog();
             break;
         case "3.1":
             add_user();
@@ -565,7 +569,68 @@
             } ]
         }
     });
+    
+    
+    var sambalog_table = {
+    	    view:"list",
+    	    id:"sambalog_table",
+    	    data:[
 
+    	    ]
+    	};
+    
+   var grid = {
+        view:"datatable",
+        id: "sambalog_table",
+        columns:[
+                 { id:"username",   header:"Имя пользователя"},
+                 { id:"ipAddress",    header:"IP адрес"},
+                 { id:"filePath",   header:"Файл"},
+                 { id:"operation",   header:"Действие"},
+                 { id:"date",   header:"Дата"}
+             ],
+             autoheight:true,
+             autowidth:true,
+             resizeColumn:true,
+             resizeRow:true,
+        data:[
+        ]
+    };
+    
+    
+    //окно просмотра лога samba
+    webix.ui({
+        view : "window",
+        position:"center",
+        id : "sambalog_window",
+        head : "<i>Лог операций с ресурсом</i>",
+        body : {
+            rows : [ grid, {
+                view : "button",
+                id: "",
+                label : "Отменить",
+                click : ("$$('sambalog_window').hide();")
+            } ]
+        }
+    });
+
+    //лог самбы для шары
+    function get_sharesambalog() {
+        var tree_id = $$("container_tree").getSelectedId();
+        //webix.ajax("get_sharesambalog/" + tree_id, function(text, data) {
+        //    if (data.json().result == false) {
+        //        webix.alert(data.json().message);
+        //    } else {
+        //        $$("sambalog_window").show();
+        //        $$("sambalog_table").clearAll();
+        //        $$("sambalog_table").parse(data.json().items);
+        // }
+        //});
+        var url = "get_sharesambalog/" + tree_id;
+        window.open(url, "", "height=200,width=800");
+    }
+    
+    
     //список содержимого шары
     function get_sharefilelist() {
         var tree_id = $$("container_tree").getSelectedId();

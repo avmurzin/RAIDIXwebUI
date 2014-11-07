@@ -54,6 +54,7 @@ class ContainerManipulationController {
 	 * @return JSON - UUID идентификатор созданного контейнера.
 	 */
 	def new_container() {
+
 		String parentuuid = params.parentuuid;
 		String name = params.name;
 		String description = params.description;
@@ -82,6 +83,7 @@ class ContainerManipulationController {
 					uuid = container.uuid.toString()
 					value = container.name
 					image = container.type.toString()
+					LogUi.log("создание виртуального контейнера", "${parentuuid}/${container.uuid.toString()} (${container.name})")
 				}
 			}
 		} else {
@@ -100,14 +102,15 @@ class ContainerManipulationController {
 	 * @return JSON result = true|false и при успехе uuid удаленного контейнера.
 	 */
 	def del_container() {
-		//TODO: при удалении контейнера следует освобождать квоту
 		String cuuid = params.uuid;
+
 		if (SecurityUtils.subject.isPermitted("${cuuid}:${UserRole.OWNER.toString()}")) {
 			UiContainerTree tree1 = UiContainerTree.getInstance();
 			if (tree1.delContainer(UUID.fromString(cuuid))) {
 				render(contentType: "application/json") {
 					result = true
 					uuid = cuuid
+					LogUi.log("удаление контейнера", "${cuuid}")
 				}
 			} else {
 				render(contentType: "application/json") {
@@ -174,6 +177,8 @@ class ContainerManipulationController {
 					description = container.description
 					maxquota = container.maxQuota
 					freequota = container.freeQuota
+					
+					LogUi.log("изменение контейнера", "${container.uuid.toString()}: ${container.name}|${container.description}|${container.maxQuota}|${container.freeQuota}")
 				}
 
 			}
@@ -210,6 +215,8 @@ class ContainerManipulationController {
 				render(contentType: "application/json") {
 					result = true
 					uuid = container.uuid.toString()
+					
+					LogUi.log("добавление пользователя", "${cuuid}: ${username}|${role}")
 					//message = "Недостаточно прав"
 				}
 
@@ -243,6 +250,9 @@ class ContainerManipulationController {
 			def container = Container.findByUuid(UUID.fromString(uuid))
 			def user = User.findByUsername(username)
 			if ((container != null) && (user != null)) {
+				
+				LogUi.log("удаление пользователя", "${uuid}: ${username}")
+				
 				container.removeFromUsers(user)
 				container.save(flush: true)
 				Collection perms = new ArrayList<String>()
@@ -255,6 +265,7 @@ class ContainerManipulationController {
 				tree1.refreshShareConfig(container)
 				render(contentType: "application/json") {
 					result = true
+					
 					//message = "Недостаточно прав"
 				}
 			} else {
@@ -300,6 +311,7 @@ class ContainerManipulationController {
 				tree1.refreshShareConfig(container)
 				render(contentType: "application/json") {
 					result = true
+					LogUi.log("удаление пользователя", "${uuid}: ${username}|${role}")
 					//message = "Недостаточно прав"
 				}
 			} else {
@@ -418,6 +430,8 @@ class ContainerManipulationController {
 					description = container.description
 					maxquota = container.maxQuota
 					freequota = container.freeQuota
+					
+					LogUi.log("создание сетевого ресурса", "${parentuuid}/${uuid}: ${container.name}|${container.type.toString()}|${container.description}")
 				}
 			} else {
 				render(contentType: "application/json") {
@@ -456,6 +470,8 @@ class ContainerManipulationController {
 					uuid = container.uuid.toString()
 					value = container.name
 					image = container.type.toString()
+					
+					LogUi.log("закрытие сетевого ресурса", "${container.uuid.toString()} (${container.name})")
 				}
 			} else {
 				render(contentType: "application/json") {
@@ -501,6 +517,8 @@ class ContainerManipulationController {
 					uuid = container.uuid.toString()
 					value = container.name
 					image = container.type.toString()
+					
+					LogUi.log("открытие сетевого ресурса", "${container.uuid.toString()} (${container.name})")
 				}
 			} else {
 				render(contentType: "application/json") {
@@ -527,51 +545,55 @@ class ContainerManipulationController {
 	 */
 	def get_filelist() {
 		String folder = params.dir;
-//		if (SecurityUtils.subject.isPermitted("${cuuid}:${UserRole.OWNER.toString()}") ||
-//		SecurityUtils.subject.isPermitted("${cuuid}:${UserRole.ADMIN.toString()}") ||
-//		SecurityUtils.subject.isPermitted("${cuuid}:${UserRole.MANAGER.toString()}"))
-//		{
+		//		if (SecurityUtils.subject.isPermitted("${cuuid}:${UserRole.OWNER.toString()}") ||
+		//		SecurityUtils.subject.isPermitted("${cuuid}:${UserRole.ADMIN.toString()}") ||
+		//		SecurityUtils.subject.isPermitted("${cuuid}:${UserRole.MANAGER.toString()}"))
+		//		{
 		def config = new ConfigSlurper().parse(new File('ConfigSlurper/avrora.groovy').toURI().toURL())
 		if (!folder.contains("${config.smb.sharefolder}") || folder == "${config.smb.sharefolder}") {
 			render(contentType: "application/json") {
 				result = false
 				message = "Недопустимое имя каталога"
-				}
-			} else {
+			}
+		} else {
 			def baseDir = new File(folder)
 			def files = []
 			def type = ""
 			if (baseDir.isDirectory()) {
-			baseDir.eachFileMatch(~/^.*$/) { files << it }
-			
-			render(contentType: "application/json") {
-				items = array {
-					item name: "..", type: "directory", path: "${baseDir.getParentFile().getAbsolutePath()}"
-					for (File file : files) {
-						if (file.isDirectory()) {
-							type = "directory"
-						} else {
-							type = "file"
+				baseDir.eachFileMatch(~/^.*$/) { files << it }
+
+				render(contentType: "application/json") {
+					items = array {
+						item name: "..", type: "directory", path: "${baseDir.getParentFile().getAbsolutePath()}"
+						for (File file : files) {
+							if (file.isDirectory()) {
+								type = "directory"
+							} else {
+								type = "file"
+							}
+							item name: "${file.name}", type: "${type}", path: "${file.absolutePath}"
 						}
-						item name: "${file.name}", type: "${type}", path: "${file.absolutePath}"
 					}
 				}
-			}
 			} else {
-			render(contentType: "application/json") {
-				result = false
-				message = "Объект не является каталогом"
+				render(contentType: "application/json") {
+					result = false
+					message = "Объект не является каталогом"
+				}
 			}
-			}
-			}
-//		} else {
-//			render(contentType: "application/json") {
-//				result = false
-//				message = "Недостаточно прав"
-//			}
-//		}
+		}
+		//		} else {
+		//			render(contentType: "application/json") {
+		//				result = false
+		//				message = "Недостаточно прав"
+		//			}
+		//		}
 	}
-	
+	/**
+	 * Получить список файлов и каталогов внутри шары uuid.
+	 * +Доступ: ${parentuuid}:OWNER || ${parentuuid}:ADMIN || ${parentuuid}:MANAGER
+	 * @return
+	 */
 	def get_sharefilelist() {
 		String cuuid = params.uuid;
 		if (SecurityUtils.subject.isPermitted("${cuuid}:${UserRole.OWNER.toString()}") ||
@@ -588,7 +610,7 @@ class ContainerManipulationController {
 			}
 		}
 	}
-	
+
 	/**
 	 * Получить данные из лога sambalog.
 	 * ?ipAddress=&username=&filePath=
@@ -600,25 +622,64 @@ class ContainerManipulationController {
 		String ipAddress = params.ipAddress;
 		String username = params.username;
 		String filePath = params.filePath;
+		
+		LogUi.log("получить лог samba", "")
+		
 		Calendar calendar = new GregorianCalendar()
 		def locale =  new Locale("ru", "RU")
 		def records = SambaLog.findAllByIpAddressLikeAndUsernameLikeAndFilePathLike("%${ipAddress}%", "%${username}%", "%${filePath}%");
-			render(contentType: "application/json") {
-				items = array {
-					for (SambaLog record : records) {
-						calendar.setTimeInMillis(record.timestamp * 1000)
-						calendar.computeFields()
-						item username: "${record.username}", ipAddress: "${record.ipAddress}", filePath: "${record.filePath}", 
-						operation: "${record.operation}", status: "${record.status}",
-						date: "${calendar.get(Calendar.HOUR_OF_DAY)}:${calendar.get(Calendar.MINUTE)} ${calendar.get(Calendar.DAY_OF_MONTH)}/${calendar.get(Calendar.MONTH)}/${calendar.get(Calendar.YEAR)}",
-						timezone: "${calendar.getTimeZone().getDisplayName()}"
-					} //year: "${calendar.getDisplayName(Calendar.YEAR,Calendar.LONG, locale)}",
+		render(contentType: "application/json") {
+			items = array {
+				for (SambaLog record : records) {
+					calendar.setTimeInMillis(record.timestamp * 1000)
+					calendar.computeFields()
+					item username: "${record.username}", ipAddress: "${record.ipAddress}", filePath: "${record.filePath}",
+					operation: "${record.operation}", status: "${record.status}",
+					date: "${calendar.get(Calendar.HOUR_OF_DAY)}:${calendar.get(Calendar.MINUTE)} ${calendar.get(Calendar.DAY_OF_MONTH)}/${calendar.get(Calendar.MONTH)}/${calendar.get(Calendar.YEAR)}",
+					timezone: "${calendar.getTimeZone().getDisplayName()}"
 				}
 			}
-		
+		}
+
 
 	}
 
+	/**
+	 * Получить samba-лог для шары uuid.
+	 * +Доступ: ${parentuuid}:OWNER || ${parentuuid}:ADMIN || ${parentuuid}:MANAGER
+	 * @return
+	 */
+	def get_sharesambalog() {
+		String cuuid = params.uuid;
+		if (SecurityUtils.subject.isPermitted("${cuuid}:${UserRole.OWNER.toString()}") ||
+		SecurityUtils.subject.isPermitted("${cuuid}:${UserRole.ADMIN.toString()}") ||
+		SecurityUtils.subject.isPermitted("${cuuid}:${UserRole.MANAGER.toString()}"))
+		{
+			String sharepath = Container.findByUuid(UUID.fromString(cuuid)).sharepath
+			
+			LogUi.log("получить лог samba сетевого ресурса", "${cuuid}")
+
+			Calendar calendar = new GregorianCalendar()
+			def locale =  new Locale("ru", "RU")
+			def records = SambaLog.findAllBySharePath("${sharepath}")
+			def html = "<table border=\"1\"><tr><th>Пользователь</th><th>IP-адрес</th><th>Файл</th><th>Действие</th><th>Статус</th><th>Время</th></tr>";
+
+			for (SambaLog record : records) {
+				calendar.setTimeInMillis(record.timestamp * 1000)
+				calendar.computeFields()
+				html += "<tr><td>${record.username}</td><td>${record.ipAddress}</td><td>${record.filePath}</td>" +
+						"<td>${record.operation}</td><td>${record.status}</td>" +
+						"<td>${calendar.get(Calendar.HOUR_OF_DAY)}:${calendar.get(Calendar.MINUTE)} ${calendar.get(Calendar.DAY_OF_MONTH)}/${calendar.get(Calendar.MONTH)}/${calendar.get(Calendar.YEAR)} ${calendar.getTimeZone().getDisplayName()}</td></tr>"
+			}
+			render(html)
+
+		} else {
+			render(contentType: "application/json") {
+				result = false
+				message = "Недостаточно прав"
+			}
+		}
+	}
 
 	/**
 	 * Добавить права (в формате Apache Shiro)  пользователю ?username=&permission=.
@@ -627,6 +688,8 @@ class ContainerManipulationController {
 	def add_permission() {
 		String username = params.username;
 		String permission = params.permission;
+		
+		LogUi.log("добавить права пользователя", "${username}|${permission}")
 
 		def user = User.findByUsername(username)
 		user.addToPermissions(permission)
@@ -643,6 +706,8 @@ class ContainerManipulationController {
 	def del_permission() {
 		String username = params.username;
 		String permission = params.permission;
+		
+		LogUi.log("удалить права пользователя", "${username}|${permission}")
 
 		def user = User.findByUsername(username)
 		user.removeFromPermissions(permission)
