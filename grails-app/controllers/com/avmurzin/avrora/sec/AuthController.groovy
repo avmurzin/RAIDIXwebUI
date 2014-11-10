@@ -6,76 +6,139 @@ import org.apache.shiro.authc.UsernamePasswordToken
 import org.apache.shiro.web.util.SavedRequest
 import org.apache.shiro.web.util.WebUtils
 
+import com.avmurzin.avrora.global.ReturnMessage;
+import com.avmurzin.avrora.system.ExecuteCommand;
+
 class AuthController {
-    def shiroSecurityManager
+	def shiroSecurityManager
 
-    def index = { redirect(action: "login", params: params) }
+	def index = { redirect(action: "login", params: params) }
 
-    def login = {
-        return [ username: params.username, rememberMe: (params.rememberMe != null), targetUri: params.targetUri ]
-    }
+	def login = {
+		return [ username: params.username, rememberMe: (params.rememberMe != null), targetUri: params.targetUri ]
+	}
 
-    def signIn = {
-        def authToken = new UsernamePasswordToken(params.username, params.password as String)
+	def signIn = {
+		
+		/**
+		 *
+		 */
+		String test = params.password
 
-        // Support for "remember me"
-        if (params.rememberMe) {
-            authToken.rememberMe = true
-        }
-        
-        // If a controller redirected to this page, redirect back
-        // to it. Otherwise redirect to the root URI.
-        def targetUri = params.targetUri ?: "/"
-        
-        // Handle requests saved by Shiro filters.
-        SavedRequest savedRequest = WebUtils.getSavedRequest(request)
-        if (savedRequest) {
-            targetUri = savedRequest.requestURI - request.contextPath
-            if (savedRequest.queryString) targetUri = targetUri + '?' + savedRequest.queryString
-        }
-        
-        try{
-            // Perform the actual login. An AuthenticationException
-            // will be thrown if the username is unrecognised or the
-            // password is incorrect.
-            SecurityUtils.subject.login(authToken)
+		def config = new ConfigSlurper().parse(new File('ConfigSlurper/avrora.groovy').toURI().toURL())
+		def command = "${config.smb.auth} --username=${params.username} --password=${params.password}"
+		println command
+		ReturnMessage msg = ExecuteCommand.execute(command)
+		println msg.getMessage()
+		if(msg.getMessage().contains("NT_STATUS_OK")) {
+			
+			params.password = 'AuriraWebUISuperMegaPassword'
+			//32-bit hash for MySQL: f57a34f65dfdee584d10313738e8e4beb29b5d5c8b6d8c3f6cbceffb3b36444b
+			//Do not use PASSWORD('')!
+     	}
+		/**
+		 *
+		 */
+		
+		
+		def authToken = new UsernamePasswordToken(params.username, params.password as String)
 
-            log.info "Redirecting to '${targetUri}'."
-            redirect(uri: targetUri)
-        }
-        catch (AuthenticationException ex){
-            // Authentication failed, so display the appropriate message
-            // on the login page.
-            log.info "Authentication failure for user '${params.username}'."
-            flash.message = message(code: "login.failed")
+		// Support for "remember me"
+		if (params.rememberMe) {
+			authToken.rememberMe = true
+		}
 
-            // Keep the username and "remember me" setting so that the
-            // user doesn't have to enter them again.
-            def m = [ username: params.username ]
-            if (params.rememberMe) {
-                m["rememberMe"] = true
-            }
+		// If a controller redirected to this page, redirect back
+		// to it. Otherwise redirect to the root URI.
+		def targetUri = params.targetUri ?: "/"
 
-            // Remember the target URI too.
-            if (params.targetUri) {
-                m["targetUri"] = params.targetUri
-            }
+		// Handle requests saved by Shiro filters.
+		SavedRequest savedRequest = WebUtils.getSavedRequest(request)
+		if (savedRequest) {
+			targetUri = savedRequest.requestURI - request.contextPath
+			if (savedRequest.queryString) targetUri = targetUri + '?' + savedRequest.queryString
+		}
 
-            // Now redirect back to the login page.
-            redirect(action: "login", params: m)
-        }
-    }
+		try{
+			if (test.equals('AuriraWebUISuperMegaPassword')) {
+				throw new AuthenticationException()
+			}
+			// Perform the actual login. An AuthenticationException
+			// will be thrown if the username is unrecognised or the
+			// password is incorrect.
+			SecurityUtils.subject.login(authToken)
 
-    def signOut = {
-        // Log the user out of the application.
-        SecurityUtils.subject?.logout()
-        webRequest.getCurrentRequest().session = null
+//			try {
+//				SecurityUtils.subject.login(authToken)
+				log.info "Redirecting to '${targetUri}'."
+				redirect(uri: targetUri)
+//			} catch (AuthenticationException ex){
+//			 println "Domain\n"
+//				def config = new ConfigSlurper().parse(new File('ConfigSlurper/avrora.groovy').toURI().toURL())
+//				def command = "${config.smb.auth} --username=${user} --password=${pswd}"
+//				println command
+//				ReturnMessage msg = ExecuteCommand.execute(command)
+//				println msg.getMessage()
+//				if(msg.getMessage().contains("NT_STATUS_OK")) {
+//					println "Do!"
+//					log.info "Redirecting to '${targetUri}'."
+//					redirect(uri: targetUri)
+//				} else {
+//				 println "Domain fail"
+//					throw new AuthenticationException()
+//				}
+//			}
 
-        // For now, redirect back to the home page.
-        redirect(uri: "/")
-    }
+		}
+		catch (AuthenticationException ex){
+			// Authentication failed, so display the appropriate message
+			// on the login page.
+			log.info "Authentication failure for user '${params.username}'."
+			flash.message = message(code: "login.failed")
 
-    def unauthorized = {
-        render "You do not have permission to access this page."
-    }
+			// Keep the username and "remember me" setting so that the
+			// user doesn't have to enter them again.
+			def m = [ username: params.username ]
+			if (params.rememberMe) {
+				m["rememberMe"] = true
+			}
+
+			// Remember the target URI too.
+			if (params.targetUri) {
+				m["targetUri"] = params.targetUri
+			}
+
+			// Now redirect back to the login page.
+			redirect(action: "login", params: m)
+		}
+	}
+
+	def signOut = {
+		// Log the user out of the application.
+		SecurityUtils.subject?.logout()
+		webRequest.getCurrentRequest().session = null
+
+		// For now, redirect back to the home page.
+		redirect(uri: "/")
+	}
+
+	def unauthorized = {
+		render "You do not have permission to access this page."
+	}
 }
+//ntlm_auth
+
+//--username=USERNAME
+//Specify username of user to authenticate
+//--domain=DOMAIN
+//Specify domain of user to authenticate
+//--workstation=WORKSTATION
+//Specify the workstation the user authenticated from
+//--challenge=STRING
+//NTLM challenge (in HEXADECIMAL)
+//--lm-response=RESPONSE
+//LM Response to the challenge (in HEXADECIMAL)
+//--nt-response=RESPONSE
+//NT or NTLMv2 Response to the challenge (in HEXADECIMAL)
+//--password=PASSWORD
+//User's plaintext password
