@@ -27,9 +27,9 @@ class AuthController {
 
 		def config = new ConfigSlurper().parse(new File('ConfigSlurper/avrora.groovy').toURI().toURL())
 		def command = "${config.smb.auth} --username=${params.username} --password=${params.password}"
-		println command
+		//println command
 		ReturnMessage msg = ExecuteCommand.execute(command)
-		println msg.getMessage()
+		//println msg.getMessage()
 		if(msg.getMessage().contains("NT_STATUS_OK")) {
 			
 			params.password = 'AuriraWebUISuperMegaPassword'

@@ -4,6 +4,7 @@ import com.avmurzin.avrora.ui.UiContainerTree
 import com.avmurzin.avrora.aux.ContainerType
 import com.avmurzin.avrora.db.Container
 import com.avmurzin.avrora.db.SambaLog
+import com.avmurzin.avrora.global.ReturnMessage
 import com.avmurzin.avrora.global.ShareType
 import com.avmurzin.avrora.global.UserRole
 
@@ -330,7 +331,7 @@ class ContainerManipulationController {
 
 	/**
 	 * Получить список всех пользователей контейнера uuid и их ролей.
-	 * @return - JSON вида {"user1":"OWNER","user2":"MANAGER"}
+	 * @return - JSON вида [username: "${user.username}", role: "${role}"]
 	 */
 	//	def get_container_users() {
 	//		String uuid = params.uuid;
@@ -681,38 +682,38 @@ class ContainerManipulationController {
 		}
 	}
 
-	/**
-	 * Добавить права (в формате Apache Shiro)  пользователю ?username=&permission=.
-	 * @return
-	 */
-	def add_permission() {
-		String username = params.username;
-		String permission = params.permission;
-		
-		LogUi.log("добавить права пользователя", "${username}|${permission}")
-
-		def user = User.findByUsername(username)
-		user.addToPermissions(permission)
-		user.save(flush: true)
-		render(contentType: "application/json") {
-			user
-		}
-	}
-
-	/**
-	 * Удалить права (в формате Apache Shiro) пользователю ?username=&permission=
-	 * @return
-	 */
-	def del_permission() {
-		String username = params.username;
-		String permission = params.permission;
-		
-		LogUi.log("удалить права пользователя", "${username}|${permission}")
-
-		def user = User.findByUsername(username)
-		user.removeFromPermissions(permission)
-		user.save(flush: true)
-	}
+//	/**
+//	 * Добавить права (в формате Apache Shiro)  пользователю ?username=&permission=.
+//	 * @return
+//	 */
+//	def add_permission() {
+//		String username = params.username;
+//		String permission = params.permission;
+//		
+//		LogUi.log("добавить права пользователя", "${username}|${permission}")
+//
+//		def user = User.findByUsername(username)
+//		user.addToPermissions(permission)
+//		user.save(flush: true)
+//		render(contentType: "application/json") {
+//			user
+//		}
+//	}
+//
+//	/**
+//	 * Удалить права (в формате Apache Shiro) пользователю ?username=&permission=
+//	 * @return
+//	 */
+//	def del_permission() {
+//		String username = params.username;
+//		String permission = params.permission;
+//		
+//		LogUi.log("удалить права пользователя", "${username}|${permission}")
+//
+//		def user = User.findByUsername(username)
+//		user.removeFromPermissions(permission)
+//		user.save(flush: true)
+//	}
 
 
 	/**
@@ -720,11 +721,22 @@ class ContainerManipulationController {
 	 * @return
 	 */
 	def get_username() {
+		def login = SecurityUtils.subject.getPrincipal().toString()
+		def user = User.findByUsername(login)
+		def perm = user.permissions.find {it == "*:*"}
+		def rol = ""
+		if (perm != null) {
+			rol = "ROOT"
+		}
 		render(contentType: "application/json") {
-			username = SecurityUtils.subject.getPrincipal().toString()
+			//username = SecurityUtils.subject.getPrincipal().toString()
+			username = login
+			role = rol 
 		}
 
 	}
+	
+	
 	def experimental() {
 		String uuid = params.uuid;
 		//String name = params.name;

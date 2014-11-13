@@ -56,7 +56,12 @@
              {id: "2.3", value: "Удалить"},
              {id: "2.4", value: "Содержимое"},
              {id: "2.5", value: "Журнал"}
-                                                ]}             
+                                                ]},
+        { id:"4",value:"Администрирование", submenu:[ 
+             {id: "4.1", value: "Пользователи"},
+             {id: "4.2", value: "Журналы"},
+             {id: "4.3", value: "Сеть"}
+         ]}
     ];
     
     //объект главного меню
@@ -218,7 +223,10 @@
             break;
         case "3.1":
             add_user();
-            break;            
+            break;
+        case "4.1":
+            window.open("users.html", "", "");
+        	break;
         default:
             
     }
@@ -670,6 +678,11 @@
         });
         webix.ajax("get_username/", function(text, data) {
             $$("logged_user").setValue(data.json().username);
+            if (data.json().role != "ROOT") {
+            	$$("top_menu").hideItem("4");
+            } else {
+            	$$("top_menu").showItem("4");
+            }
         });
     });
     
