@@ -195,6 +195,7 @@ class ContainerManipulationController {
 	 * Добавить пользователя контейнера uuid с указанием его роли
 	 * ?username=&role=OWNER|ADMIN|MANAGER|ROUSER|RWUSER
 	 * права добавляются в виде "${uuid}:${UserRole}"
+	 * Одновременно применяются правила квотирования.
 	 * +Доступ: ${uuid}:OWNER
 	 * @return
 	 */
@@ -213,12 +214,31 @@ class ContainerManipulationController {
 				user.addToPermissions("${cuuid}:${role.toString()}")
 				user.save(flush: true)
 				tree1.refreshShareConfig(container)
+				LogUi.log("добавление пользователя", "${cuuid}: ${username}|${role}")
+				
+				//изменить квоты
+						QuotaSet quotaSet;
+				
+						def config = new ConfigSlurper().parse(new File('ConfigSlurper/avrora.groovy').toURI().toURL())
+						//определить тип используемой FS (по настройкам)
+				
+						switch (config.quota.fstype) {
+							case "zfs":
+							//println "zfs"
+								quotaSet = ZfsQuotaSet.getInstance()
+								break;
+							case "xfs":
+							//println "xfs"
+								quotaSet = XfsQuotaSet.getInstance()
+								break;
+						}
+						user.maxQuota
+						quotaSet.setUserQuota(username, user.maxQuota, cuuid)
+				////////////////
+				
 				render(contentType: "application/json") {
 					result = true
 					uuid = container.uuid.toString()
-					
-					LogUi.log("добавление пользователя", "${cuuid}: ${username}|${role}")
-					//message = "Недостаточно прав"
 				}
 
 			} else {
@@ -381,7 +401,7 @@ class ContainerManipulationController {
 							def perm = user.permissions.find {it == "${uuid}:${role.toString()}"}
 							//println perm
 							if (perm != null) {
-								userse username: "${user.username}", role: "${role}"
+								userse username: "${user.username}", role: "${role}", quota: "${user.maxQuota / 1024 / 1024}"
 							}
 							perm = null;
 						}
@@ -681,39 +701,6 @@ class ContainerManipulationController {
 			}
 		}
 	}
-
-//	/**
-//	 * Добавить права (в формате Apache Shiro)  пользователю ?username=&permission=.
-//	 * @return
-//	 */
-//	def add_permission() {
-//		String username = params.username;
-//		String permission = params.permission;
-//		
-//		LogUi.log("добавить права пользователя", "${username}|${permission}")
-//
-//		def user = User.findByUsername(username)
-//		user.addToPermissions(permission)
-//		user.save(flush: true)
-//		render(contentType: "application/json") {
-//			user
-//		}
-//	}
-//
-//	/**
-//	 * Удалить права (в формате Apache Shiro) пользователю ?username=&permission=
-//	 * @return
-//	 */
-//	def del_permission() {
-//		String username = params.username;
-//		String permission = params.permission;
-//		
-//		LogUi.log("удалить права пользователя", "${username}|${permission}")
-//
-//		def user = User.findByUsername(username)
-//		user.removeFromPermissions(permission)
-//		user.save(flush: true)
-//	}
 
 
 	/**

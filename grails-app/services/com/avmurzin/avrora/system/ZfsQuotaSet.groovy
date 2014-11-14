@@ -53,7 +53,7 @@ class ZfsQuotaSet implements QuotaSet {
 	}
 
 	@Override
-	public ReturnMessage setUserQuota(String username, long maxquota) {
+	public ReturnMessage setUserQuota(String username, long maxquota, String cuuid) {
 		def config = new ConfigSlurper().parse(new File('ConfigSlurper/avrora.groovy').toURI().toURL())
 		def user = User.findByUsername(username)
 		if (user == null) {
@@ -63,7 +63,7 @@ class ZfsQuotaSet implements QuotaSet {
 		} else {
 			user.maxQuota = maxquota
 			user.save(flush: true)
-			ExecuteCommand.execute("sudo ${config.quota.setuserscript} ${user.username} ${user.maxQuota / 1024} ${config.quota.zfs.pool}${config.smb.sharefolder}")
+			ExecuteCommand.execute("sudo ${config.quota.setuserscript} ${user.username} ${user.maxQuota / 1024} ${config.quota.zfs.pool} ${cuuid}")
 			returnMessage.setMessage("")
 			returnMessage.setResult(true)
 		}

@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html>
+    <head>
+     <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+        <link rel="stylesheet" href="codebase/webix.css" type="text/css" media="screen" charset="utf-8">
+        <script src="codebase/webix.js" type="text/javascript" charset="utf-8"></script>
+        <style>
+
+            .blue.webix_menu-x{
+                background:#3498DB;
+            }
+        </style>
+        
+        <title>Управление сетевыми фильтрами</title>
+    </head>
+    <style type="text/css">
+        .mark{
+            width:100px;
+            text-align: center;
+            font-weight:bold;
+            float:right;
+            background-color:#777;
+            color:white;
+            border-radius:3px;
+        }
+        .info{
+            width:100px;
+            text-align: center;
+            font-weight:normal;
+            float:right;
+            background-color:#F99;
+            color:white;
+            border-radius:3px;
+        }
+    </style>
+    
+<body>
+<script type="text/javascript" charset="utf-8">
+
+
+//тулбар справа от главного меню
+var toolbar = {
+        view:"toolbar", paddingY:0,  elements:[
+             
+            { view:"button", label:"Закрыть", width:100, on:{
+                onItemClick:function(){
+                    logout();
+                }
+                } }
+        ]
+    };
+
+//форма добавления блокирующего правила (ip, mask, add)
+
+var form_block = {
+		view:"form", 
+        id:"form_block",
+        width:350,
+        elements:[{view:"fieldset", label:"Блокирование адреса", body:{rows:[
+            { view:"text", name: "ip", label:"IP-адрес"},
+            { view:"text", name:"mask", label:"Маска"},
+            { margin:5, cols:[
+                { view:"button", value:"Добавить правило", type: "danger", on : {
+                    onItemClick:function(){
+                        make_rule_block();
+                    }
+                    } }
+            ]}
+       ] }}]
+	    }
+
+var form_limit = {
+        view:"form", 
+        id:"form_limit",
+        width:350,
+        elements:[{view:"fieldset", label:"Ограничение числа сессий", body:{rows:[
+            { view:"text", name: "ip", label:"IP-адрес"},
+            { view:"text", name:"mask", label:"Маска"},
+            { view:"text", name:"session", label:"Ограничение"},
+            { margin:5, cols:[
+                { view:"button", value:"Добавить правило", type: "danger", on : {
+                	onItemClick:function(){
+                        make_rule_limit();
+                    }
+                    } }
+            ]}
+       ] }}]
+        }
+
+var rules_list =  {
+        view: "list",
+        id: "rules_list",
+        template: "<font color=#color#>#text#</font> <span class='info'>Удалить</span>",
+        select:true,
+        onClick:{
+            info:function(e, id){
+            	del_iptables(id);
+                return false;
+            }
+        },
+        data:[]
+}
+
+//верстка страницы интерфейса
+webix.ui({
+    rows:[
+        {type:"clean", cols: [{},toolbar]},
+        { cols: [form_block, form_limit]},
+        rules_list
+    ]
+});
+
+//создать сетевое правило
+function make_rule_block() {
+	
+    var ip = $$('form_block').getValues().ip;
+    var mask = $$('form_block').getValues().mask;
+    
+    webix.ajax("add_iptables/block?ipaddress=" + ip + "&mask=" + mask, function(text, data) {
+        webix.ajax("list_iptables", function(text, data) {
+        	$$("rules_list").clearAll();
+            $$("rules_list").parse(data.json().rules);
+           
+        });
+    });
+
+}
+
+function make_rule_limit() {
+    
+    var ip = $$('form_limit').getValues().ip;
+    var mask = $$('form_limit').getValues().mask;
+    var session = $$('form_limit').getValues().session;
+
+    webix.ajax("add_iptables/limit?ipaddress=" + ip + "&mask=" + mask + "&limit=" + session, function(text, data) {
+        webix.ajax("list_iptables", function(text, data) {
+        	$$("rules_list").clearAll();
+            $$("rules_list").parse(data.json().rules);
+           
+        });
+       
+    });
+}  
+
+//список содержимого обычного каталога
+function del_iptables(id) {
+	var num = $$("rules_list").getItem(id).id;
+	 webix.ajax("del_iptables/" + num, function(text, data) {
+		 webix.ajax("list_iptables", function(text, data) {
+	            $$("rules_list").clearAll();
+	            $$("rules_list").parse(data.json().rules);
+	           
+	        });
+        
+     });
+}
+
+//окно загрузилось, можно запросить правила
+webix.attachEvent("onReady", function(){
+    $$("rules_list").clearAll();
+    webix.ajax("list_iptables", function(text, data) {
+        $$("rules_list").parse(data.json().rules);
+       
+    });
+});
+
+function logout() {
+	var thisWindow = window.open("iptables.html",'_self');
+	thisWindow.close();
+}
+
+</script>
+    </body>
+</html>

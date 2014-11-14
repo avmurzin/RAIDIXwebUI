@@ -82,15 +82,19 @@ class UrlMappings {
 		//?username=&role=WEBUSER|ROOT
 		"/del_permission" (controller: "userManipulation", action: "del_permission")
 		
+		//Искать пользователя
+		//?username=
+		"/find_user" (controller: "userManipulation", action: "find_user")
+		
 		//Добавить пользователя и пароль
-		//?username=&password=
+		//?username=&password=&password2=
 		"/add_user" (controller: "userManipulation", action: "add_user")
 		
 		//Удалить пользователя username
 		"/del_user/$username" (controller: "userManipulation", action: "del_user")
 		
 		//Изменить пароль пользователя username
-		//?password=
+		//?password=&password2=
 		"/change_password/$username" (controller: "userManipulation", action: "change_password")
 		
 		//Получить всех веб-пользователей с правами

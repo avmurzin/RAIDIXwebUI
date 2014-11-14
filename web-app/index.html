@@ -11,7 +11,7 @@
             }
         </style>
         
-        <title>Menu in Toolbar</title>
+        <title>Управление дисковыми ресурсами</title>
     </head>
     <style type="text/css">
         .mark{
@@ -59,6 +59,7 @@
                                                 ]},
         { id:"4",value:"Администрирование", submenu:[ 
              {id: "4.1", value: "Пользователи"},
+             {id: "4.4", value: "Сессии"},
              {id: "4.2", value: "Журналы"},
              {id: "4.3", value: "Сеть"}
          ]}
@@ -130,7 +131,7 @@
     var users_list = {
     		view: "list",
     		id: "users",
-    		template: "<strong>#username#</strong> <span class='info'>Удалить</span> <div class='mark'>#role# </div> ",
+    		template: "<strong>#username#</strong> (квота: #quota# M) <span class='info'>Удалить</span> <div class='mark'>#role# </div> ",
     		type:{
                 height:62
             },
@@ -225,8 +226,14 @@
             add_user();
             break;
         case "4.1":
-            window.open("users.html", "", "");
+            window.open("users.html", "", "height=800,width=1000");
         	break;
+        case "4.3":
+            window.open("iptables.html", "", "height=800,width=800");
+            break;
+        case "4.4":
+            window.open("smbstatus.html", "", "height=800,width=800");
+            break;
         default:
             
     }

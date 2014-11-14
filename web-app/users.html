@@ -37,7 +37,276 @@
     <body>
 <script type="text/javascript" charset="utf-8">
 
+//тулбар справа от главного меню
+var toolbar = {
+        view:"toolbar", paddingY:0,  elements:[
+             
+            { view:"button", label:"Закрыть", width:100, on:{
+                onItemClick:function(){
+                    logout();
+                }
+                } }
+        ]
+    };
 
+var webusers_list =  {
+        view: "list",
+        id: "webusers_list",
+        template: "#username# <span class='info'>Удалить</span><span class='mark'>#role#</span>",
+        select:true,
+        onClick:{
+            info:function(e, id){
+                del_role(id);
+                return false;
+            }
+        },
+        data:[]
+}
+
+var findusers_list =  {
+        view: "list",
+        id: "findusers_list",
+        template: "#username# (квота: #quota#) <span class='info'>Удалить</span><span class='mark'>#type#</span>",
+        select:true,
+        onClick:{
+            info:function(e, id){
+                del_user(id);
+                return false;
+            }
+        },
+        data:[],
+        on:{
+            onItemClick:function(id){
+                fill_form(id);
+            }
+           }
+}
+
+var form_adduser = {
+        view:"form", 
+        id:"form_adduser",
+        elements:[{view:"fieldset", label:"Добавить пользователя", body:{rows:[
+            { view:"text", name:"username", label:"Имя: "},
+            { view:"text", type:"password", name:"password", label:"Пароль: "},
+            { view:"text", type:"password", name:"password2", label:"Пароль:"},
+            { margin:5, cols:[
+                { view:"button", value:"Добавить", on : {
+                    onItemClick:function(){
+                        add_user();
+                    }
+                    } }
+            ]}
+       ] }}]
+        }
+        
+var form_setpassword =  {
+        view:"form", 
+        id:"form_setpassword",
+        elements:[{view:"fieldset", label:"Изменить пароль", body:{rows:[
+            { view:"text", name:"username", label:"Имя: "},
+            { view:"text", type:"password", name:"password", label:"Пароль: "},
+            { view:"text", type:"password", name:"password2", label:"Пароль:"},
+            { margin:5, cols:[
+                { view:"button", value:"Изменить", on : {
+                    onItemClick:function(){
+                        setpassword();
+                    }
+                    } }
+            ]}
+       ] }}]
+        }
+	
+var form_setquota =  {
+        view:"form", 
+        id:"form_setquota",
+        elements:[{view:"fieldset", label:"Установить квоту", body:{rows:[
+            { view:"text", name:"username", label:"Имя: "},
+            { view:"text", name:"quota", label:"Мб: "},
+            { margin:5, cols:[
+                { view:"button", value:"Установить", on : {
+                    onItemClick:function(){
+                        setquota();
+                    }
+                    } }
+            ]}
+       ] }}]
+        }
+
+var form_finduser = {
+        view:"form", 
+        id:"form_finduser",
+        elements:[{view:"fieldset", label:"Искать пользователей", body:{rows:[
+            { view:"text", name:"username", label:"Имя: "},
+            { margin:5, cols:[
+                { view:"button", value:"Искать", on : {
+                    onItemClick:function(){
+                        find_user();
+                    }
+                    } }
+            ]}
+       ] }}]
+        }
+
+var button_root = { view:"button", width: 100, value:"ROOT->", on : {
+    onItemClick:function(){
+        add_root();
+    }
+    } }
+    
+var button_web = { view:"button",  width: 100, value:"WEBUSER->", on : {
+    onItemClick:function(){
+        add_web();
+    }
+    } }    
+    
+    
+//верстка страницы интерфейса
+webix.ui({
+    rows:[
+        {type:"clean", cols: [{},toolbar]},
+        { cols: [form_adduser, form_setpassword, form_setquota]},
+        { cols: [{rows:[{view:"label", label: "Все пользователи", align:"center"}, form_finduser, findusers_list]}, {rows:[{},button_root, button_web,{}]}, {rows:[{view:"label", label: "Пользователи web-интерфейса", align:"center"},webusers_list]}]}
+    ]
+});
+
+
+function del_role(id) {
+    //var user_id = $$("webusers_list").getSelectedId();
+    var username = $$("webusers_list").getItem(id).username;
+    var role = $$("webusers_list").getItem(id).role;
+    webix.ajax("del_permission?username=" + username + "&role=" + role, function(text, data) {
+        if (data.json().result == false) {
+            webix.alert(data.json().message);
+        } else {
+            $$("webusers_list").clearAll();
+            webix.ajax("get_localusers", function(text, data) {
+                $$("webusers_list").parse(data.json().userses);
+               
+            });
+        }
+    });	
+}
+
+function add_user() {
+	var username = $$('form_adduser').getValues().username;
+	var password = $$('form_adduser').getValues().password;
+	var password2 = $$('form_adduser').getValues().password2;
+    webix.ajax("add_user?username=" + username + "&password=" + password + "&password2=" + password2, function(text, data) {
+        if (data.json().result == false) {
+            webix.alert(data.json().message);
+        } else {
+        	webix.alert(data.json().message);
+        }
+    });	
+}
+
+function del_user(id) {
+	  var username = $$("findusers_list").getItem(id).username;   
+    webix.ajax("del_user/" + username, function(text, data) {
+        if (data.json().result == false) {
+            webix.alert(data.json().message);
+        } else {
+            $$("findusers_list").clearAll();
+            var username = $$('form_finduser').getValues().username;
+            webix.ajax("find_user?username=" + username, function(text, data) {
+                $$("findusers_list").parse(data.json().userses);
+                
+                $$("webusers_list").clearAll();
+                webix.ajax("get_localusers", function(text, data) {
+                    $$("webusers_list").parse(data.json().userses);
+                   
+                });
+           
+            });
+        }
+    });
+}
+
+function add_root() {
+	var user_id = $$("findusers_list").getSelectedId();
+	var username = $$("findusers_list").getItem(user_id).username;
+	webix.ajax("add_permission?username=" + username + "&role=ROOT", function(text, data) {
+        if (data.json().result == false) {
+            webix.alert(data.json().message);
+        } else {
+        	$$("webusers_list").clearAll();
+            webix.ajax("get_localusers", function(text, data) {
+                $$("webusers_list").parse(data.json().userses);
+               
+            });
+        }
+    });
+}
+
+function add_web() {
+	   var user_id = $$("findusers_list").getSelectedId();
+	    var username = $$("findusers_list").getItem(user_id).username;
+	    webix.ajax("add_permission?username=" + username + "&role=WEBUSER", function(text, data) {
+	        if (data.json().result == false) {
+	            webix.alert(data.json().message);
+	        } else {
+	            $$("webusers_list").clearAll();
+	            webix.ajax("get_localusers", function(text, data) {
+	                $$("webusers_list").parse(data.json().userses);
+	               
+	            });
+	        }
+	    });   
+}
+
+function setpassword() {
+    var username = $$('form_setpassword').getValues().username;
+    var password = $$('form_setpassword').getValues().password;
+    var password2 = $$('form_setpassword').getValues().password2;
+    webix.ajax("change_password/" + username + "?password=" + password + "&password2=" + password2, function(text, data) {
+        if (data.json().result == false) {
+            webix.alert(data.json().message);
+        } else {
+            webix.alert(data.json().message);
+        }
+    });	
+}
+
+function setquota() {
+	var username = $$('form_setquota').getValues().username;
+	var quota = $$('form_setquota').getValues().quota * 1024 * 1024;
+    webix.ajax("set_user_quota/" + username + "?maxquota=" + quota, function(text, data) {
+        if (data.json().result == false) {
+            webix.alert(data.json().message);
+        } else {
+            webix.alert(data.json().message);
+        }
+    }); 
+}
+
+function fill_form(id) {
+	var usern = $$("findusers_list").getItem(id).username;
+	$$('form_setpassword').setValues({username: usern});
+	$$('form_setquota').setValues({username: usern});
+}
+
+function find_user() {
+    $$("findusers_list").clearAll();
+    var username = $$('form_finduser').getValues().username;
+    webix.ajax("find_user?username=" + username, function(text, data) {
+        $$("findusers_list").parse(data.json().userses);
+   
+    });
+}
+
+function logout() {
+    var thisWindow = window.open("iptables.html",'_self');
+    thisWindow.close();
+}
+
+//окно загрузилось, можно запросить пользователей
+webix.attachEvent("onReady", function(){
+    $$("webusers_list").clearAll();
+    webix.ajax("get_localusers", function(text, data) {
+        $$("webusers_list").parse(data.json().userses);
+       
+    });
+});
 </script>
     </body>
 </html>

@@ -61,7 +61,7 @@ class XfsQuotaSet implements QuotaSet {
 	}
 	
 	@Override
-	public ReturnMessage setUserQuota(String username, long maxquota) {
+	public ReturnMessage setUserQuota(String username, long maxquota, String cuuid) {
 		def config = new ConfigSlurper().parse(new File('ConfigSlurper/avrora.groovy').toURI().toURL())
 		def user = User.findByUsername(username)
 		if (user == null) {

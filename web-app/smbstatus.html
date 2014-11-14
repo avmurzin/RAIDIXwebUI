@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html>
+    <head>
+     <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+        <link rel="stylesheet" href="codebase/webix.css" type="text/css" media="screen" charset="utf-8">
+        <script src="codebase/webix.js" type="text/javascript" charset="utf-8"></script>
+        <style>
+
+            .blue.webix_menu-x{
+                background:#3498DB;
+            }
+        </style>
+        
+        <title>Управление сетевыми фильтрами</title>
+    </head>
+    <style type="text/css">
+        .mark{
+            width:100px;
+            text-align: center;
+            font-weight:bold;
+            float:right;
+            background-color:#777;
+            color:white;
+            border-radius:3px;
+        }
+        .info{
+            width:100px;
+            text-align: center;
+            font-weight:normal;
+            float:right;
+            background-color:#F99;
+            color:white;
+            border-radius:3px;
+        }
+    </style>
+    
+<body>
+<script type="text/javascript" charset="utf-8">
+
+
+//тулбар справа от главного меню
+var toolbar = {
+        view:"toolbar", paddingY:0,  elements:[
+{ view:"button", label:"Обновить", width:100, on:{
+    onItemClick:function(){
+        refresh();
+    }
+    } }, 
+            { view:"button", label:"Закрыть", width:100, on:{
+                onItemClick:function(){
+                    logout();
+                }
+                } }
+        ]
+    };
+
+var iframe = {
+		view:"iframe", 
+		id:"frame-body", 
+		src:""
+}
+
+var form_kill = {
+        view:"form", 
+        id:"form_kill",
+        elements:[{view:"fieldset", label:"Сброс сетевой сессии", body:{rows:[
+            { view:"text", name:"pid", label:"PID:"},
+            { margin:5, cols:[
+                { view:"button", value:"Сброс", type: "danger", on : {
+                    onItemClick:function(){
+                        make_kill();
+                    }
+                    } }
+            ]}
+       ] }}]
+        }
+
+//верстка страницы интерфейса
+webix.ui({
+    rows:[
+        {type:"clean", cols: [{},toolbar]},
+        form_kill,
+        iframe
+    ]
+});
+
+
+
+//окно загрузилось, можно запросить текущие сессии
+webix.attachEvent("onReady", function(){
+        $$("frame-body").load("get_smbstatus");
+});
+
+function refresh() {
+	$$("frame-body").load("get_smbstatus");
+}
+
+function logout() {
+	var thisWindow = window.open("iptables.html",'_self');
+	thisWindow.close();
+}
+
+function make_kill() {
+	var pid = $$('form_kill').getValues().pid;
+	 webix.ajax("kill_smb/" + pid, function(text, data) {
+		 
+		 if (data.json().result == false) {
+             webix.alert(data.json().message);
+          } else {
+        	  $$("frame-body").load("get_smbstatus");
+        	  webix.alert(data.json().message);
+         }
+      
+     });
+}
+
+</script>
+    </body>
+</html>
