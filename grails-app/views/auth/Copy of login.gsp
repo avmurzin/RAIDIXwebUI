@@ -13,15 +13,15 @@
     <table>
       <tbody>
         <tr>
-          <td>Имя пользователя: </td>
+          <td>Username:</td>
           <td><input type="text" name="username" value="${username}" /></td>
         </tr>
         <tr>
-          <td>Пароль:</td>
+          <td>Password:</td>
           <td><input type="password" name="password" value="" /></td>
         </tr>
         <tr>
-          <td>Запомнить меня:</td>
+          <td>Remember me?:</td>
           <td><g:checkBox name="rememberMe" value="${rememberMe}" /></td>
         </tr>
         <tr>
