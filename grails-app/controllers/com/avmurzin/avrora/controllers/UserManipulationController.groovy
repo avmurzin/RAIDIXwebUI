@@ -2,6 +2,7 @@ package com.avmurzin.avrora.controllers
 
 import com.avmurzin.avrora.aux.ContainerType
 import com.avmurzin.avrora.db.Container
+import com.avmurzin.avrora.db.WebUiLog
 import com.avmurzin.avrora.global.UserRole
 
 import org.apache.shiro.SecurityUtils
@@ -489,6 +490,32 @@ class UserManipulationController {
 				}
 			}
 
+		}
+		
+		//Получить лог веб-интерфейса
+		//?username=&ipAddress=&operation=
+		def get_weblog() {
+			String ipAddress = params.ipAddress;
+			String username = params.username;
+			String operation = params.operation;
+			
+			LogUi.log("получить лог веб-интерфейса", "")
+			
+			Calendar calendar = new GregorianCalendar()
+			def locale =  new Locale("ru", "RU")
+			def records = WebUiLog.findAllByIpAddressLikeAndUsernameLikeAndOperationLike("%${ipAddress}%", "%${username}%", "%${operation}%");
+			render(contentType: "application/json") {
+				items = array {
+					for (WebUiLog record : records) {
+						calendar.setTimeInMillis(record.timestamp * 1000)
+						calendar.computeFields()
+						item username: "${record.username}", ipAddress: "${record.ipAddress}", operation: "${record.operation}",
+						description: "${record.description}",
+						date: "${calendar.get(Calendar.HOUR_OF_DAY)}:${calendar.get(Calendar.MINUTE)} ${calendar.get(Calendar.DAY_OF_MONTH)}/${calendar.get(Calendar.MONTH)}/${calendar.get(Calendar.YEAR)}",
+						timezone: "${calendar.getTimeZone().getDisplayName()}"
+					}
+				}
+			}
 		}
 
 	}

@@ -116,6 +116,10 @@ class UrlMappings {
 		//Получить список правил в таблице filter, цепочка INPUT
 		"/list_iptables" (controller: "userManipulation", action: "list_iptables")
 		
+		//Получить лог веб-интерфейса
+		//?username=&ipAddress=&operation=
+		"/get_weblog" (controller: "userManipulation", action: "get_weblog")
+		
 		"/experimental" (controller: "containerManipulation", action: "experimental")
 		
         //"/"(view:"/index")

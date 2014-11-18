@@ -41,11 +41,7 @@
 //тулбар справа от главного меню
 var toolbar = {
         view:"toolbar", paddingY:0,  elements:[
-{ view:"button", label:"Обновить", width:100, on:{
-    onItemClick:function(){
-        refresh();
-    }
-    } }, 
+
             { view:"button", label:"Закрыть", width:100, on:{
                 onItemClick:function(){
                     logout();
@@ -55,18 +51,21 @@ var toolbar = {
     };
 
 var iframe = {
-        view:"iframe", 
-        id:"frame-body", 
-        src:""
-}
+        view:"list",
+        id: "log",
+        template:"<font color=red>#username#</font> | <font color=green>#ipAddress#</font> | <font color=red>#filePath#</font> | #operation# | #status# | #date# | #timezone#",
+        data:[]
+    }
 
 var form_kill = {
         view:"form", 
         id:"form_kill",
-        elements:[{view:"fieldset", label:"Сброс сетевой сессии", body:{rows:[
-            { view:"text", name:"pid", label:"PID:"},
+        elements:[{view:"fieldset", label:"Поиск записей в журнале", body:{rows:[
+            { view:"text", name:"username", label:"Имя: ", labelAlign:'right'},
+            { view:"text", name:"ip", label:"IP-адрес    :", labelAlign:'right'},
+            { view:"text", name:"path", label:"Файл: ", labelAlign:'right'},
             { margin:5, cols:[
-                { view:"button", value:"Сброс", type: "danger", on : {
+                { view:"button", value:"Искать", on : {
                     onItemClick:function(){
                         make_kill();
                     }
@@ -79,7 +78,7 @@ var form_kill = {
 webix.ui({
     rows:[
         {type:"clean", cols: [{},toolbar]},
-        form_kill,
+        {type:"clean", cols: [form_kill,{}]},
         iframe
     ]
 });
@@ -88,27 +87,30 @@ webix.ui({
 
 //окно загрузилось, можно запросить текущие сессии
 webix.attachEvent("onReady", function(){
-        $$("frame-body").load("get_smbstatus");
+        //$$("frame-body").load("get_smbstatus");
 });
 
 function refresh() {
-    $$("frame-body").load("get_smbstatus");
+    //$$("frame-body").load("get_smbstatus");
 }
 
 function logout() {
-    var thisWindow = window.open("iptables.html",'_self');
+    var thisWindow = window.open("sambalog.html",'_self');
     thisWindow.close();
 }
 
 function make_kill() {
-    var pid = $$('form_kill').getValues().pid;
-     webix.ajax("kill_smb/" + pid, function(text, data) {
+    var username = $$('form_kill').getValues().username;
+    var ip = $$('form_kill').getValues().ip;
+    var path = $$('form_kill').getValues().path;
+     webix.ajax("get_sambalog?username=" + username + "&ipAddress=" + ip + "&filePath=" + path, function(text, data) {
          
          if (data.json().result == false) {
              webix.alert(data.json().message);
           } else {
-              $$("frame-body").load("get_smbstatus");
-              webix.alert(data.json().message);
+        	  $$("log").clearAll();
+              $$("log").parse(data.json().items);
+              //webix.alert(data.json().message);
          }
       
      });

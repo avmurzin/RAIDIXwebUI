@@ -60,7 +60,7 @@
         { id:"4",value:"Администрирование", submenu:[ 
              {id: "4.1", value: "Пользователи"},
              {id: "4.4", value: "Сессии"},
-             {id: "4.2", value: "Журналы"},
+             {id: "4.2", value: "Журналы", submenu:[{id: "4.2.1", value: "Samba"},{id: "4.2.2", value: "Web"}]},
              {id: "4.3", value: "Сеть"}
          ]}
     ];
@@ -233,6 +233,12 @@
             break;
         case "4.4":
             window.open("smbstatus.html", "", "height=800,width=800");
+            break;
+        case "4.2.1":
+            window.open("sambalog.html", "", "height=800,width=1000");
+            break;
+        case "4.2.2":
+            window.open("weblog.html", "", "height=800,width=1000");
             break;
         default:
             

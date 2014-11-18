@@ -5,7 +5,7 @@
   <title>Login</title>
 </head>
 <body>
-  <g:if test="${flash.message}">
+   <g:if test="${flash.message}">
     <div class="message">${flash.message}</div>
   </g:if>
   <g:form action="signIn">
@@ -26,7 +26,7 @@
         </tr>
         <tr>
           <td />
-          <td><input type="submit" value="Sign in" /></td>
+          <td><input type="submit" value="Войти" /></td>
         </tr>
       </tbody>
     </table>
