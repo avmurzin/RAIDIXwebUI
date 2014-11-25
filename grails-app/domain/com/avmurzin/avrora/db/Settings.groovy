@@ -8,6 +8,7 @@ class Settings {
 	int quotapercent
 	long lastcheck
 	long period
+	int trytimes;
 
 	static mapping = {
 		table "settings";
@@ -18,6 +19,7 @@ class Settings {
 		quotapercent column: "quotapercent";
 		lastcheck column: "lastcheck";
 		period column: "period";
+		trytimes column: "trytimes";
 	}
     static constraints = {
     }

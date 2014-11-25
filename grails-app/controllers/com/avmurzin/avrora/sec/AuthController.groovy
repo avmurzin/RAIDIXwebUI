@@ -5,7 +5,8 @@ import org.apache.shiro.authc.AuthenticationException
 import org.apache.shiro.authc.UsernamePasswordToken
 import org.apache.shiro.web.util.SavedRequest
 import org.apache.shiro.web.util.WebUtils
-
+import com.avmurzin.avrora.db.Settings
+import com.avmurzin.avrora.db.WebUiLog
 import com.avmurzin.avrora.global.ReturnMessage;
 import com.avmurzin.avrora.system.ExecuteCommand;
 
@@ -19,7 +20,7 @@ class AuthController {
 	}
 
 	def signIn = {
-		
+
 		/**
 		 *
 		 */
@@ -31,16 +32,16 @@ class AuthController {
 		ReturnMessage msg = ExecuteCommand.execute(command)
 		//println msg.getMessage()
 		if(msg.getMessage().contains("NT_STATUS_OK")) {
-			
+
 			params.password = 'AuriraWebUISuperMegaPassword'
 			//32-bit hash for MySQL: f57a34f65dfdee584d10313738e8e4beb29b5d5c8b6d8c3f6cbceffb3b36444b
 			//Do not use PASSWORD('')!
-     	}
+		}
 		/**
 		 *
 		 */
-		
-		
+
+
 		def authToken = new UsernamePasswordToken(params.username, params.password as String)
 
 		// Support for "remember me"
@@ -68,29 +69,59 @@ class AuthController {
 			// password is incorrect.
 			SecurityUtils.subject.login(authToken)
 
-//			try {
-//				SecurityUtils.subject.login(authToken)
-				log.info "Redirecting to '${targetUri}'."
-				redirect(uri: targetUri)
-//			} catch (AuthenticationException ex){
-//			 println "Domain\n"
-//				def config = new ConfigSlurper().parse(new File('ConfigSlurper/avrora.groovy').toURI().toURL())
-//				def command = "${config.smb.auth} --username=${user} --password=${pswd}"
-//				println command
-//				ReturnMessage msg = ExecuteCommand.execute(command)
-//				println msg.getMessage()
-//				if(msg.getMessage().contains("NT_STATUS_OK")) {
-//					println "Do!"
-//					log.info "Redirecting to '${targetUri}'."
-//					redirect(uri: targetUri)
-//				} else {
-//				 println "Domain fail"
-//					throw new AuthenticationException()
-//				}
-//			}
+			//если прошло успешно, то затереть лог
+			def alert = WebUiLog.findByUsernameAndOperation("${params.username}", "login_alert")
+			if (alert != null) {
+				alert.delete(flush: true)
+			}
+			
+			log.info "Redirecting to '${targetUri}'."
+			redirect(uri: targetUri)
+
 
 		}
 		catch (AuthenticationException ex){
+			int times = 0;
+			// проверка числа попыток входа
+			def trytimes = Settings.findByIndexes(1).trytimes
+			Calendar calendar = new GregorianCalendar()
+			long timestamp = calendar.getTimeInMillis() / 1000
+			def alert = WebUiLog.findByUsernameAndOperation("${params.username}", "login_alert")
+			if (alert != null) {
+
+				try {
+
+					times = Integer.parseInt("${alert.description}")
+
+				} catch (Exception e) { println "catch"	}
+
+				if ((times+1) >= trytimes ) {
+					def conf = new ConfigSlurper().parse(new File('ConfigSlurper/avrora.groovy').toURI().toURL())
+					ExecuteCommand.execute("sudo ${config.security.alert} ${params.username}")
+				} else {
+					++ times
+					alert.username = params.username
+					alert.ipAddress = ""
+					alert.operation = "login_alert"
+					alert.timestamp = timestamp
+					alert.description = times
+					alert.save(flush: true)
+				}
+
+			} else {
+				alert = new WebUiLog()
+				alert.username = params.username
+				alert.ipAddress = ""
+				alert.operation = "login_alert"
+				alert.timestamp = timestamp
+				alert.description = "1"
+				alert.save(flush: true)
+			}
+			
+			///////
+
+
+
 			// Authentication failed, so display the appropriate message
 			// on the login page.
 			log.info "Authentication failure for user '${params.username}'."

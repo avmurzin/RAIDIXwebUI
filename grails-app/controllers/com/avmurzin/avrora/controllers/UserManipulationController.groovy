@@ -520,16 +520,17 @@ class UserManipulationController {
 		}
 		
 	//установить настройки время_хранения_самба/вебЮИ/почта/предел_квоты/последнее_обращение/период_обращения
-	//?sambadays=&webdays=&email=&quotapercent=&lastcheck=&period=
+	//?sambadays=&webdays=&email=&quotapercent=&lastcheck=&period=&alert=
 	def set_settings() {
 		long sambadays, webdays, lastcheck, period
-		int quotapercent
+		int quotapercent, alert
 		try {
 			sambadays = Long.valueOf(params.sambadays).longValue()
 			webdays = Long.valueOf(params.webdays).longValue()
 			//lastcheck = Long.valueOf(params.lastcheck).longValue()
 			period = Long.valueOf(params.period).longValue()
 			quotapercent = Integer.valueOf(params.quotapercent).intValue()
+			alert = Integer.valueOf(params.alert).intValue()
 		} catch (Exception e) {
 			render(contentType: "application/json") {
 				result = false
@@ -547,6 +548,7 @@ class UserManipulationController {
 		set.period = period
 		set.quotapercent = quotapercent
 		set.email = email
+		set.trytimes = alert
 		set.save(flush: true)
 
 		render(contentType: "application/json") {
@@ -567,6 +569,7 @@ class UserManipulationController {
 			period = "${set.period}"
 			quotapercent = "${set.quotapercent}"
 			email = "${set.email}"
+			alert = "${set.trytimes}"
 			
 		}
 	}

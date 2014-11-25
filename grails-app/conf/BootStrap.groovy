@@ -45,7 +45,7 @@ class BootStrap {
 		
 		if (Settings.count() == 0) {
 			def set = new Settings(indexes: 1, sambadays: 2592000, webdays: 2592000, email: "admin@oao.rzd", 
-				quotapercent: 10, lastcheck: 0, period: 86400)
+				quotapercent: 10, lastcheck: 0, period: 86400, trytimes: 3)
 
 			set.save(flush: true)
 		}

@@ -17,7 +17,7 @@ class ZfsQuotaSet implements QuotaSet {
 	private ZfsQuotaSet() {}
 
 	ReturnMessage returnMessage = new ReturnMessage()
-	
+
 	/**
 	 * Установить квоту на шару (== набор данных ZFS).
 	 * вызывается скрипт config.quota.zfs.setscript
@@ -56,14 +56,27 @@ class ZfsQuotaSet implements QuotaSet {
 	public ReturnMessage setUserQuota(String username, long maxquota, String cuuid) {
 		def config = new ConfigSlurper().parse(new File('ConfigSlurper/avrora.groovy').toURI().toURL())
 		def user = User.findByUsername(username)
+		String st = ""
 		if (user == null) {
 			returnMessage.setMessage("Пользователь не сущесвтует")
 			returnMessage.setResult(false)
 
 		} else {
+			st = username
 			user.maxQuota = maxquota
 			user.save(flush: true)
-			ExecuteCommand.execute("sudo ${config.quota.setuserscript} ${user.username} ${user.maxQuota / 1024} ${config.quota.zfs.pool} ${cuuid}")
+			//если это группа
+			if (st.matches("@.*\$")) {
+				st = st.replaceAll("@", "")
+				st = st.replaceAll("\"", "")
+				ExecuteCommand.execute("sudo ${config.quota.setgroupquota} ${st} ${user.maxQuota / 1024} ${config.quota.zfs.pool} ${cuuid}")
+			} else {
+				//если это юзер
+				ExecuteCommand.execute("sudo ${config.quota.setuserscript} ${user.username} ${user.maxQuota / 1024} ${config.quota.zfs.pool} ${cuuid}")
+			}
+			//
+
+
 			returnMessage.setMessage("")
 			returnMessage.setResult(true)
 		}
@@ -138,10 +151,10 @@ class ZfsQuotaSet implements QuotaSet {
 	@Override
 	public ReturnMessage renameDir(String oldsharepath, String newsharepath, String uuid) {
 		def config = new ConfigSlurper().parse(new File('ConfigSlurper/avrora.groovy').toURI().toURL())
-		
-//		returnMessage.setResult(false)
-//		returnMessage.setMessage("В текущей версии переименование сетевого ресурса заблокировано")
-		
+
+		//		returnMessage.setResult(false)
+		//		returnMessage.setMessage("В текущей версии переименование сетевого ресурса заблокировано")
+
 		try {
 			//ExecuteCommand.execute("zfs rename ${config.quota.zfs.pool}${oldsharepath} ${config.quota.zfs.pool}${newsharepath}")
 			ExecuteCommand.execute("sudo ${config.quota.zfs.renamedir} ${config.quota.zfs.pool}${oldsharepath} ${config.quota.zfs.pool}${newsharepath}")

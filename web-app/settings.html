@@ -55,10 +55,11 @@ var form_settings = {
         view:"form", 
         width:500,
         id:"form_settings",
-        elements:[{view:"fieldset", label:"Отправка извещений об исчерпании квот", body:{rows:[
+        elements:[{view:"fieldset", label:"Отправка извещений об исчерпании квот и предупреждений безопасности", body:{rows:[
             { view:"text", name:"email", type: "email", label:"Email: ", width:300, align:"right"},
-            { view:"counter", name:"quotapercent", label:"Остаток квоты, %: ", labelWidth: 150, align:"right"},
-            { view:"counter", name:"period", label:"Периодичность, дн: ", labelWidth: 150, align:"right"}
+            { view:"counter", name:"quotapercent", label:"Остаток квоты, %: ", labelWidth: 200, align:"right"},
+            { view:"counter", name:"period", label:"Периодичность, дн: ", labelWidth: 200, align:"right"},
+            { view:"counter", name:"alert", label:"Неудачных попыток входа: ", labelWidth: 200, align:"right"}
             
        ] }},
        {view:"fieldset", label:"Сроки хранения журналов", body:{rows:[
@@ -91,9 +92,10 @@ function set_settings() {
 	var period = $$('form_settings').getValues().period * 3600 * 24;
 	var sambadays = $$('form_settings').getValues().sambadays * 3600 * 24;
 	var webdays = $$('form_settings').getValues().webdays * 3600 * 24;
+	var alert = $$('form_settings').getValues().alert;
 
     webix.ajax("set_settings?email=" + email + "&quotapercent=" + quotapercent +
-    		"&period=" + period + "&sambadays=" + sambadays + "&webdays=" + webdays,function(text, data) {
+    		"&period=" + period + "&sambadays=" + sambadays + "&webdays=" + webdays + "&alert=" + alert,function(text, data) {
         if (data.json().result == false) {
             webix.alert(data.json().message);
         } else {
@@ -115,7 +117,7 @@ webix.attachEvent("onReady", function(){
     webix.ajax("get_settings", function(text, data) {
     	$$('form_settings').setValues({email: data.json().email, quotapercent: data.json().quotapercent,
     			period: data.json().period / 3600/ 24, sambadays: data.json().sambadays / 3600 / 24,
-    			webdays: data.json().webdays / 3600 / 24});
+    			webdays: data.json().webdays / 3600 / 24, alert: data.json().alert});
     });
 });
 </script>
