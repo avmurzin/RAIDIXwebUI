@@ -3,6 +3,7 @@ package com.avmurzin.avrora.controllers
 import com.avmurzin.avrora.aux.ContainerType
 import com.avmurzin.avrora.db.Container
 import com.avmurzin.avrora.db.WebUiLog
+import com.avmurzin.avrora.db.Settings
 import com.avmurzin.avrora.global.UserRole
 
 import org.apache.shiro.SecurityUtils
@@ -517,5 +518,57 @@ class UserManipulationController {
 				}
 			}
 		}
+		
+	//установить настройки время_хранения_самба/вебЮИ/почта/предел_квоты/последнее_обращение/период_обращения
+	//?sambadays=&webdays=&email=&quotapercent=&lastcheck=&period=
+	def set_settings() {
+		long sambadays, webdays, lastcheck, period
+		int quotapercent
+		try {
+			sambadays = Long.valueOf(params.sambadays).longValue()
+			webdays = Long.valueOf(params.webdays).longValue()
+			//lastcheck = Long.valueOf(params.lastcheck).longValue()
+			period = Long.valueOf(params.period).longValue()
+			quotapercent = Integer.valueOf(params.quotapercent).intValue()
+		} catch (Exception e) {
+			render(contentType: "application/json") {
+				result = false
+				message = "Неверные параметры"
+			}
+		}
 
+		String email = params.email
+
+
+		def set = Settings.findByIndexes(1)
+		set.sambadays = sambadays
+		set.webdays = webdays
+		set.lastcheck = lastcheck
+		set.period = period
+		set.quotapercent = quotapercent
+		set.email = email
+		set.save(flush: true)
+
+		render(contentType: "application/json") {
+			result = true
+			message = "Установлено"
+		}
 	}
+	
+	//получить настройки время_хранения_самба/вебЮИ/почта/предел_квоты/последнее_обращение/период_обращения
+	def get_settings() {
+
+		def set = Settings.findByIndexes(1)
+
+		render(contentType: "application/json") {
+			sambadays = "${set.sambadays}"
+			webdays = "${set.webdays}"
+			lastcheck = "${set.lastcheck}"
+			period = "${set.period}"
+			quotapercent = "${set.quotapercent}"
+			email = "${set.email}"
+			
+		}
+	}
+
+}

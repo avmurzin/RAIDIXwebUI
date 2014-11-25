@@ -61,7 +61,8 @@
              {id: "4.1", value: "Пользователи"},
              {id: "4.4", value: "Сессии"},
              {id: "4.2", value: "Журналы", submenu:[{id: "4.2.1", value: "Samba"},{id: "4.2.2", value: "Web"}]},
-             {id: "4.3", value: "Сеть"}
+             {id: "4.3", value: "Сеть"},
+             {id: "4.5", value: "Настройки"}
          ]}
     ];
     
@@ -239,6 +240,9 @@
             break;
         case "4.2.2":
             window.open("weblog.html", "", "height=800,width=1000");
+            break;
+        case "4.5":
+            window.open("settings.html", "", "height=400,width=600");
             break;
         default:
             

@@ -1,6 +1,9 @@
 import com.avmurzin.avrora.sec.User
+
 import org.apache.shiro.crypto.hash.Sha256Hash
+
 import com.avmurzin.avrora.db.Container
+import com.avmurzin.avrora.db.Settings
 import com.avmurzin.avrora.aux.ContainerType
 import com.avmurzin.avrora.global.GlobalProperties
 
@@ -40,7 +43,12 @@ class BootStrap {
 		//container.maxQuota = 1073741824
 		container.save()
 		
-		
+		if (Settings.count() == 0) {
+			def set = new Settings(indexes: 1, sambadays: 2592000, webdays: 2592000, email: "admin@oao.rzd", 
+				quotapercent: 10, lastcheck: 0, period: 86400)
+
+			set.save(flush: true)
+		}
 		
 		}
     }

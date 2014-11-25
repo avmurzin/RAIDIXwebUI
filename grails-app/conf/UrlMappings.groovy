@@ -120,6 +120,13 @@ class UrlMappings {
 		//?username=&ipAddress=&operation=
 		"/get_weblog" (controller: "userManipulation", action: "get_weblog")
 		
+		//установить настройки время_хранения_самба/вебЮИ/почта/предел_квоты/последнее_обращение/период_обращения
+		//?sambadays=&webdays=&email=&quotapercent=&lastcheck=&period=
+		"/set_settings" (controller: "userManipulation", action: "set_settings")
+		
+		//получить настройки время_хранения_самба/вебЮИ/почта/предел_квоты/последнее_обращение/период_обращения
+		"/get_settings" (controller: "userManipulation", action: "get_settings")
+		
 		"/experimental" (controller: "containerManipulation", action: "experimental")
 		
         //"/"(view:"/index")

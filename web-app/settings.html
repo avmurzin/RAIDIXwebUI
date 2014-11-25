@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html>
+    <head>
+     <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+        <link rel="stylesheet" href="codebase/webix.css" type="text/css" media="screen" charset="utf-8">
+        <script src="codebase/webix.js" type="text/javascript" charset="utf-8"></script>
+        <style>
+
+            .blue.webix_menu-x{
+                background:#3498DB;
+            }
+        </style>
+        
+        <title>Menu in Toolbar</title>
+    </head>
+    <style type="text/css">
+        .mark{
+            width:100px;
+            text-align: center;
+            font-weight:bold;
+            float:right;
+            background-color:#777;
+            color:white;
+            border-radius:3px;
+        }
+        .info{
+            width:100px;
+            text-align: center;
+            font-weight:normal;
+            float:right;
+            background-color:#F99;
+            color:white;
+            border-radius:3px;
+        }
+    </style>
+    
+    <body>
+<script type="text/javascript" charset="utf-8">
+
+//тулбар справа от главного меню
+var toolbar = {
+        view:"toolbar", paddingY:0,  elements:[
+             
+            { view:"button", label:"Закрыть", width:100, on:{
+                onItemClick:function(){
+                    logout();
+                }
+                } }
+        ]
+    };
+
+
+
+var form_settings = {
+        view:"form", 
+        width:500,
+        id:"form_settings",
+        elements:[{view:"fieldset", label:"Отправка извещений об исчерпании квот", body:{rows:[
+            { view:"text", name:"email", type: "email", label:"Email: ", width:300, align:"right"},
+            { view:"counter", name:"quotapercent", label:"Остаток квоты, %: ", labelWidth: 150, align:"right"},
+            { view:"counter", name:"period", label:"Периодичность, дн: ", labelWidth: 150, align:"right"}
+            
+       ] }},
+       {view:"fieldset", label:"Сроки хранения журналов", body:{rows:[
+         { view:"counter", name:"sambadays", label:"Время хранения лога samba, дн: ", labelWidth: 250, align:"right"},                                                                     
+         { view:"counter", name:"webdays", label:"Время хранения лога web, дн: ", labelWidth: 250, align:"right"}                                                        ]}},
+       { margin:5, cols:[
+                         { view:"button", value:"Сохранить", on : {
+                             onItemClick:function(){
+                                 set_settings();
+                             }
+                             } }
+                     ]}
+        ]
+        }
+        
+  
+    
+//верстка страницы интерфейса
+webix.ui({
+    rows:[
+        {type:"clean", cols: [{},toolbar]},
+        { cols: [form_settings]},
+        ]
+});
+
+
+function set_settings() {
+	var email = $$('form_settings').getValues().email;
+	var quotapercent = $$('form_settings').getValues().quotapercent;
+	var period = $$('form_settings').getValues().period * 3600 * 24;
+	var sambadays = $$('form_settings').getValues().sambadays * 3600 * 24;
+	var webdays = $$('form_settings').getValues().webdays * 3600 * 24;
+
+    webix.ajax("set_settings?email=" + email + "&quotapercent=" + quotapercent +
+    		"&period=" + period + "&sambadays=" + sambadays + "&webdays=" + webdays,function(text, data) {
+        if (data.json().result == false) {
+            webix.alert(data.json().message);
+        } else {
+        	webix.alert(data.json().message);
+        }
+    });	
+}
+
+
+
+function logout() {
+    var thisWindow = window.open("settings.html",'_self');
+    thisWindow.close();
+}
+
+//окно загрузилось, можно запросить настройки
+webix.attachEvent("onReady", function(){
+    //$$("form_settings").clearAll();
+    webix.ajax("get_settings", function(text, data) {
+    	$$('form_settings').setValues({email: data.json().email, quotapercent: data.json().quotapercent,
+    			period: data.json().period / 3600/ 24, sambadays: data.json().sambadays / 3600 / 24,
+    			webdays: data.json().webdays / 3600 / 24});
+    });
+});
+</script>
+    </body>
+</html>

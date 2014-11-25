@@ -8,7 +8,6 @@ class SambaLog {
 	String status
 	String filePath
 	String sharePath
-	
 
 	static mapping = {
 		table "sambalog";

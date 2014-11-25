@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html>
+    <head>
+     <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+        <link rel="stylesheet" href="codebase/webix.css" type="text/css" media="screen" charset="utf-8">
+        <script src="codebase/webix.js" type="text/javascript" charset="utf-8"></script>
+        <style>
+
+            .blue.webix_menu-x{
+                background:#3498DB;
+            }
+        </style>
+        
+        <title>Управление сессиями</title>
+    </head>
+    <style type="text/css">
+        .mark{
+            width:100px;
+            text-align: center;
+            font-weight:bold;
+            float:right;
+            background-color:#777;
+            color:white;
+            border-radius:3px;
+        }
+        .info{
+            width:100px;
+            text-align: center;
+            font-weight:normal;
+            float:right;
+            background-color:#F99;
+            color:white;
+            border-radius:3px;
+        }
+    </style>
+    
+<body>
+<script type="text/javascript" charset="utf-8">
+
+
+//тулбар справа от главного меню
+var toolbar = {
+        view:"toolbar", paddingY:0,  elements:[
+
+            { view:"button", label:"Закрыть", width:100, on:{
+                onItemClick:function(){
+                    logout();
+                }
+                } }
+        ]
+    };
+
+var iframe = {
+        view:"datatable",
+        id: "log",
+        resizeColumn:true,
+        columns:[{id:"username", header:"Пользователь"},
+                 {id:"ipAddress", header:"IP-адрес"},
+                 {id:"operation", header:"Действие"},
+                 {id:"description", header:"Описание"},
+                 {id:"date", header:"Время"},
+                 {id:"timezone", header:"Зона"}
+                 ]
+    }
+
+var form_kill = {
+        view:"form", 
+        id:"form_kill",
+        elements:[{view:"fieldset", label:"Поиск записей в журнале", body:{rows:[
+            { view:"text", name:"username", label:"Имя: ", labelAlign:'right'},
+            { view:"text", name:"ip", label:"IP-адрес    :", labelAlign:'right'},
+            { view:"text", name:"operation", label:"Действие: ", labelAlign:'right'},
+            { margin:5, cols:[
+                { view:"button", value:"Искать", on : {
+                    onItemClick:function(){
+                        make_kill();
+                    }
+                    } }
+            ]}
+       ] }}]
+        }
+
+//верстка страницы интерфейса
+webix.ui({
+    rows:[
+        {type:"clean", cols: [{},toolbar]},
+        {type:"clean", cols: [form_kill,{}]},
+        iframe
+    ]
+});
+
+
+
+//окно загрузилось, можно запросить текущие сессии
+webix.attachEvent("onReady", function(){
+        //$$("frame-body").load("get_smbstatus");
+});
+
+function refresh() {
+    //$$("frame-body").load("get_smbstatus");
+}
+
+function logout() {
+    var thisWindow = window.open("weblog.html",'_self');
+    thisWindow.close();
+}
+
+function make_kill() {
+    var username = $$('form_kill').getValues().username;
+    var ip = $$('form_kill').getValues().ip;
+    var operation = $$('form_kill').getValues().operation;
+     webix.ajax("get_weblog?username=" + username + "&ipAddress=" + ip + "&operation=" + operation, function(text, data) {
+         
+         if (data.json().result == false) {
+             webix.alert(data.json().message);
+          } else {
+              $$("log").clearAll();
+              $$("log").parse(data.json().items);
+              //webix.alert(data.json().message);
+         }
+      
+     });
+}
+
+</script>
+    </body>
+</html>

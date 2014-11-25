@@ -7,7 +7,7 @@ class WebUiLog {
 	String operation
 	String description
 
-	
+
 
 	static mapping = {
 		table "webuilog";
@@ -17,7 +17,7 @@ class WebUiLog {
 		operation column: "operation";
 		description column: "description";
 	}
-	
-    static constraints = {
-    }
+
+	static constraints = {
+	}
 }
