@@ -104,6 +104,10 @@ class ContainerManipulationController {
 	 */
 	def del_container() {
 		String cuuid = params.uuid;
+		
+		if (!checknode()) {
+			return
+		}
 
 		if (SecurityUtils.subject.isPermitted("${cuuid}:${UserRole.OWNER.toString()}")) {
 			UiContainerTree tree1 = UiContainerTree.getInstance();
@@ -157,6 +161,10 @@ class ContainerManipulationController {
 		String cname = params.name;
 		String cdescription = params.description;
 		long cmaxquota = Long.valueOf(params.maxquota).longValue();
+		
+		if (!checknode()) {
+			return
+		}
 
 		if (cdescription.equals('')) {
 			cdescription = "без описания"
@@ -178,7 +186,7 @@ class ContainerManipulationController {
 					description = container.description
 					maxquota = container.maxQuota
 					freequota = container.freeQuota
-					
+
 					LogUi.log("изменение контейнера", "${container.uuid.toString()}: ${container.name}|${container.description}|${container.maxQuota}|${container.freeQuota}")
 				}
 
@@ -204,6 +212,10 @@ class ContainerManipulationController {
 		String username = params.username;
 		UserRole role = params.role;
 		UiContainerTree tree1 = UiContainerTree.getInstance();
+		
+		if (!checknode()) {
+			return
+		}
 
 		if (SecurityUtils.subject.isPermitted("${cuuid}:${UserRole.OWNER.toString()}")) {
 			def container = Container.findByUuid(UUID.fromString(cuuid))
@@ -215,27 +227,27 @@ class ContainerManipulationController {
 				user.save(flush: true)
 				tree1.refreshShareConfig(container)
 				LogUi.log("добавление пользователя", "${cuuid}: ${username}|${role}")
-				
+
 				//изменить квоты
-						QuotaSet quotaSet;
-				
-						def config = new ConfigSlurper().parse(new File('ConfigSlurper/avrora.groovy').toURI().toURL())
-						//определить тип используемой FS (по настройкам)
-				
-						switch (config.quota.fstype) {
-							case "zfs":
-							//println "zfs"
-								quotaSet = ZfsQuotaSet.getInstance()
-								break;
-							case "xfs":
-							//println "xfs"
-								quotaSet = XfsQuotaSet.getInstance()
-								break;
-						}
-						user.maxQuota
-						quotaSet.setUserQuota(username, user.maxQuota, cuuid)
+				QuotaSet quotaSet;
+
+				def config = new ConfigSlurper().parse(new File('ConfigSlurper/avrora.groovy').toURI().toURL())
+				//определить тип используемой FS (по настройкам)
+
+				switch (config.quota.fstype) {
+					case "zfs":
+					//println "zfs"
+						quotaSet = ZfsQuotaSet.getInstance()
+						break;
+					case "xfs":
+					//println "xfs"
+						quotaSet = XfsQuotaSet.getInstance()
+						break;
+				}
+				user.maxQuota
+				quotaSet.setUserQuota(username, user.maxQuota, cuuid)
 				////////////////
-				
+
 				render(contentType: "application/json") {
 					result = true
 					uuid = container.uuid.toString()
@@ -266,14 +278,19 @@ class ContainerManipulationController {
 		String uuid = params.uuid;
 		String username = params.username;
 		UiContainerTree tree1 = UiContainerTree.getInstance();
+		
+		if (!checknode()) {
+			return
+		}
+		
 		//TODO: если удалить себя и списка пользователей, то оппа...
 		if (SecurityUtils.subject.isPermitted("${uuid}:${UserRole.OWNER.toString()}")) {
 			def container = Container.findByUuid(UUID.fromString(uuid))
 			def user = User.findByUsername(username)
 			if ((container != null) && (user != null)) {
-				
+
 				LogUi.log("удаление пользователя", "${uuid}: ${username}")
-				
+
 				container.removeFromUsers(user)
 				container.save(flush: true)
 				Collection perms = new ArrayList<String>()
@@ -286,7 +303,7 @@ class ContainerManipulationController {
 				tree1.refreshShareConfig(container)
 				render(contentType: "application/json") {
 					result = true
-					
+
 					//message = "Недостаточно прав"
 				}
 			} else {
@@ -315,6 +332,11 @@ class ContainerManipulationController {
 		String username = params.username;
 		UserRole role = params.role;
 		UiContainerTree tree1 = UiContainerTree.getInstance();
+		
+		if (!checknode()) {
+			return
+		}
+		
 		//TODO: если удалить себя и списка пользователей, то оппа...
 		if (SecurityUtils.subject.isPermitted("${uuid}:${UserRole.OWNER.toString()}")) {
 			def container = Container.findByUuid(UUID.fromString(uuid))
@@ -424,6 +446,10 @@ class ContainerManipulationController {
 		String cname = params.name;
 		String description = params.description;
 		ContainerType ctype = params.sharetype;
+		
+		if (!checknode()) {
+			return
+		}
 
 		if (description.equals('')) {
 			description = "без описания"
@@ -451,7 +477,7 @@ class ContainerManipulationController {
 					description = container.description
 					maxquota = container.maxQuota
 					freequota = container.freeQuota
-					
+
 					LogUi.log("создание сетевого ресурса", "${parentuuid}/${uuid}: ${container.name}|${container.type.toString()}|${container.description}")
 				}
 			} else {
@@ -491,7 +517,7 @@ class ContainerManipulationController {
 					uuid = container.uuid.toString()
 					value = container.name
 					image = container.type.toString()
-					
+
 					LogUi.log("закрытие сетевого ресурса", "${container.uuid.toString()} (${container.name})")
 				}
 			} else {
@@ -538,7 +564,7 @@ class ContainerManipulationController {
 					uuid = container.uuid.toString()
 					value = container.name
 					image = container.type.toString()
-					
+
 					LogUi.log("открытие сетевого ресурса", "${container.uuid.toString()} (${container.name})")
 				}
 			} else {
@@ -643,9 +669,9 @@ class ContainerManipulationController {
 		String ipAddress = params.ipAddress;
 		String username = params.username;
 		String filePath = params.filePath;
-		
+
 		LogUi.log("получить лог samba", "")
-		
+
 		Calendar calendar = new GregorianCalendar()
 		def locale =  new Locale("ru", "RU")
 		def records = SambaLog.findAllByIpAddressLikeAndUsernameLikeAndFilePathLike("%${ipAddress}%", "%${username}%", "%${filePath}%");
@@ -677,7 +703,7 @@ class ContainerManipulationController {
 		SecurityUtils.subject.isPermitted("${cuuid}:${UserRole.MANAGER.toString()}"))
 		{
 			String sharepath = Container.findByUuid(UUID.fromString(cuuid)).sharepath
-			
+
 			LogUi.log("получить лог samba сетевого ресурса", "${cuuid}")
 
 			Calendar calendar = new GregorianCalendar()
@@ -718,27 +744,30 @@ class ContainerManipulationController {
 		render(contentType: "application/json") {
 			//username = SecurityUtils.subject.getPrincipal().toString()
 			username = login
-			role = rol 
+			role = rol
 		}
 
 	}
-	
-	
+
+
 	def experimental() {
 		String uuid = params.uuid;
-		//String name = params.name;
-		//
-		//		if (SecurityUtils.subject.isPermitted("${uuid}:admin")) {
-		//			render(contentType: "application/json") {
-		//				message = "Permitted"
-		//			}
-		//		} else {
-		//			render(contentType: "application/json") {
-		//				message = "Not enough permissions"
-		//			}
-		//		}
-		//SmbShareControl done = new SmbShareControl()
-		//done.closeShare(uuid)
+
+	}
+
+	private boolean checknode() {
+		def config = new ConfigSlurper().parse(new File('ConfigSlurper/avrora.groovy').toURI().toURL())
+		String message = ExecuteCommand.execute("sudo ${config.claster.check}").getMessage()
+		//String mess = ExecuteCommand.execute("${config.claster.check}").getMessage()
+		if (mess.contains("0")) {
+			render(contentType: "application/json") {
+				result = false
+				message = "Аварийное состояние кластера, изменения заблокированы. Обратитесь к администратору"
+			}
+			return false;
+		} else {
+			return true;
+		}
 	}
 
 }

@@ -72,7 +72,7 @@ class UiContainerTree {
 	 * @param username - имя пользователя, создающего контейнер.
 	 * @return новый контейнер.
 	 */
-	public Container getNewContainer(String parentuuid, String name, String description, String username) {
+	public synchronized Container getNewContainer(String parentuuid, String name, String description, String username) {
 
 		def parent = Container.findByUuid(UUID.fromString(parentuuid))
 		if (parent.type != ContainerType.VIRTUAL) {
@@ -111,7 +111,7 @@ class UiContainerTree {
 	 * @param ctype - тип создаваемого контейнера-ресурса
 	 * @return новый контейнер.
 	 */
-	public Container getNewShare(String parentuuid, String name,
+	public synchronized Container getNewShare(String parentuuid, String name,
 			String description, String username, ContainerType ctype) {
 
 		ShareControl shareControl;
@@ -151,7 +151,7 @@ class UiContainerTree {
 				shareControl = new SmbShareControl()
 				break;
 		}
-println "addShare(${container.uuid.toString()}, ${container.name},	${container.description}"
+//println "addShare(${container.uuid.toString()}, ${container.name},	${container.description}"
 		shareControl.addShare(container.uuid.toString(), container.name,
 				container.description)
 
@@ -162,7 +162,7 @@ println "addShare(${container.uuid.toString()}, ${container.name},	${container.d
 	 * Временное закрытие шары uuid.		
 	 * @return
 	 */
-	public boolean closeShare(UUID uuid) {
+	public synchronized boolean closeShare(UUID uuid) {
 		ShareControl shareControl;
 		def container = Container.findByUuid(uuid)
 		if(container == null) {
@@ -185,7 +185,7 @@ println "addShare(${container.uuid.toString()}, ${container.name},	${container.d
 	 * @param uuid
 	 * @return
 	 */
-	public boolean openShare(UUID uuid) {
+	public synchronized boolean openShare(UUID uuid) {
 		ShareControl shareControl;
 		def container = Container.findByUuid(uuid)
 
@@ -209,7 +209,7 @@ println "addShare(${container.uuid.toString()}, ${container.name},	${container.d
 	 * @param uuid
 	 * @return true - удалено, false - удаление не произошло.
 	 */
-	public boolean delContainer(UUID uuid) {
+	public synchronized boolean delContainer(UUID uuid) {
 		ShareControl shareControl;
 		def container = Container.findByUuid(uuid)
 		if (container != null) {
@@ -261,7 +261,7 @@ println "addShare(${container.uuid.toString()}, ${container.name},	${container.d
 	 * @param newmaxquota
 	 * @return
 	 */
-	public Container changeContainer(UUID uuid, String name,
+	public synchronized Container changeContainer(UUID uuid, String name,
 			String description, long newmaxquota) {
 
 		def container = Container.findByUuid(uuid)
@@ -332,7 +332,7 @@ println "addShare(${container.uuid.toString()}, ${container.name},	${container.d
 	 * @param container
 	 * @return
 	 */
-	public boolean refreshShareConfig(Container container) {
+	public synchronized boolean refreshShareConfig(Container container) {
 		ShareControl shareControl;
 		//XfsQuotaSet xfsQuotaSet;
 
