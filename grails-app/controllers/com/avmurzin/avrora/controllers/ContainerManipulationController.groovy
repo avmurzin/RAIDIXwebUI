@@ -757,7 +757,7 @@ class ContainerManipulationController {
 
 	private boolean checknode() {
 		def config = new ConfigSlurper().parse(new File('ConfigSlurper/avrora.groovy').toURI().toURL())
-		String message = ExecuteCommand.execute("sudo ${config.claster.check}").getMessage()
+		String mess = ExecuteCommand.execute("sudo ${config.claster.check}").getMessage()
 		//String mess = ExecuteCommand.execute("${config.claster.check}").getMessage()
 		if (mess.contains("0")) {
 			render(contentType: "application/json") {
